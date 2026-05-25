@@ -328,6 +328,44 @@ function saveLogsToStorage() {
   localStorage.setItem('progreso-logs', JSON.stringify(logsData));
 }
 
+// Helper to clean and format dates (e.g. handling Excel numeric dates and standard separators)
+function cleanImportedDate(dateStr) {
+  if (!dateStr) return '';
+  dateStr = String(dateStr).trim();
+  
+  // If it is a pure numeric Excel date serial number (e.g., 46208.03)
+  if (!isNaN(dateStr) && !isNaN(parseFloat(dateStr)) && parseFloat(dateStr) > 30000 && parseFloat(dateStr) < 60000) {
+    const num = parseFloat(dateStr);
+    try {
+      const excelEpoch = new Date(1899, 11, 30);
+      const msPerDay = 24 * 60 * 60 * 1000;
+      const jsDate = new Date(excelEpoch.getTime() + num * msPerDay);
+      const day = String(jsDate.getDate()).padStart(2, '0');
+      const month = String(jsDate.getMonth() + 1).padStart(2, '0');
+      const year = jsDate.getFullYear();
+      return `${day}.${month}.${year}`;
+    } catch (e) {
+      console.error("Failed to parse numeric date:", dateStr, e);
+    }
+  }
+  
+  // Replace dashes or slashes with dots
+  let cleaned = dateStr.replace(/[-/]/g, '.');
+  
+  // If it's DD.MM.YYYY, return it
+  if (/^\d{2}\.\d{2}\.\d{4}$/.test(cleaned)) {
+    return cleaned;
+  }
+  
+  // If it's YYYY.MM.DD
+  if (/^\d{4}\.\d{2}\.\d{2}$/.test(cleaned)) {
+    const parts = cleaned.split('.');
+    return `${parts[2]}.${parts[1]}.${parts[0]}`;
+  }
+  
+  return cleaned;
+}
+
 // Data Normalization (standardizes sheet parsing output)
 function normalizeImportedData(data) {
   return data.map(row => {
@@ -341,7 +379,7 @@ function normalizeImportedData(data) {
       k.toLowerCase().includes('date')
     ) || 'Date';
     
-    normalized['Date'] = row[dateKey] ? String(row[dateKey]).trim() : '';
+    normalized['Date'] = row[dateKey] ? cleanImportedDate(row[dateKey]) : '';
     normalized['Name of Exercise'] = row[nameKey] ? String(row[nameKey]).trim() : '';
     
     Object.keys(row).forEach(k => {
@@ -532,7 +570,15 @@ function setupEventListeners() {
           const parsedData = XLSX.utils.sheet_to_json(sheet);
           
           if (parsedData.length > 0) {
-            mergeLogs(parsedData);
+            const overwrite = confirm("Do you want to completely replace your history with this file?\n\n- Click OK to replace history (items deleted in file will disappear)\n- Click Cancel to merge into your existing history");
+            if (overwrite) {
+              const normalized = normalizeImportedData(parsedData);
+              logsData = normalized;
+              sortLogsChronologically();
+              saveLogsToStorage();
+            } else {
+              mergeLogs(parsedData);
+            }
             updateDashboard();
             updateProfileStats();
             alert(`Successfully imported ${parsedData.length} records!`);
@@ -1612,7 +1658,10 @@ function exportCSV() {
   
   const csvRows = logsData.map(row => {
     return headers.map(header => {
-      const cell = row[header] !== undefined && row[header] !== null ? String(row[header]) : '';
+      let cell = row[header] !== undefined && row[header] !== null ? String(row[header]) : '';
+      if (header === 'Date' && cell) {
+        cell = cell.replace(/\./g, '-');
+      }
       if (cell.includes(',') || cell.includes('"') || cell.includes('\n')) {
         return `"${cell.replace(/"/g, '""')}"`;
       }
