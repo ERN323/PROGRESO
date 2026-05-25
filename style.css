@@ -978,3 +978,179 @@ body.theme-white .nav-main-gbox {
   background: rgba(255, 255, 255, 0.04);
   border-left: 3px solid var(--accent-color);
 }
+
+/* Circular Icon Buttons */
+.btn-icon-round {
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+  transition: all 0.2s ease-in-out;
+}
+
+.btn-icon-round:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+  box-shadow: 0 0 10px var(--accent-glow);
+  transform: scale(1.05);
+}
+
+.btn-icon-round svg {
+  stroke: currentColor;
+}
+
+/* Preset Cards UI */
+.preset-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 12px 16px;
+  border-radius: 12px;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.preset-item:hover {
+  border-color: var(--accent-color);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.preset-info h4 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.preset-info p {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.preset-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* Preset Welcome Screen Cards */
+.preset-welcome-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  padding: 14px 18px;
+  border-radius: 14px;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  font-family: var(--font-family);
+  transition: all 0.2s ease-in-out;
+}
+
+.preset-welcome-card:hover {
+  border-color: var(--accent-color);
+  background: var(--accent-bg-glow);
+  box-shadow: inset 0 0 10px var(--accent-bg-glow);
+  transform: translateY(-2px);
+}
+
+.preset-welcome-card .p-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.preset-welcome-card .p-desc {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.preset-welcome-card .p-arrow {
+  color: var(--accent-color);
+  font-size: 1.2rem;
+  font-weight: 800;
+  transition: transform 0.2s;
+}
+
+.preset-welcome-card:hover .p-arrow {
+  transform: translateX(4px);
+}
+
+/* Catalogue Pill Selection */
+.cat-pill {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  color: var(--text-secondary);
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-family: var(--font-family);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.cat-pill.active {
+  background: var(--accent-color);
+  color: #000000;
+  font-weight: 700;
+  border-color: var(--accent-color);
+  box-shadow: 0 0 8px var(--accent-glow);
+}
+
+body.theme-white .cat-pill.active {
+  color: #000000;
+}
+
+/* Catalogue Exercise Items */
+.catalogue-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  color: var(--text-primary);
+  transition: all 0.15s;
+}
+
+.catalogue-item:hover {
+  border-color: var(--accent-color);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.catalogue-item span {
+  font-weight: 500;
+}
+
+.catalogue-item .add-ex-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s;
+}
+
+.catalogue-item:hover .add-ex-btn {
+  color: var(--accent-color);
+}
+
+.catalogue-item .add-ex-btn:hover {
+  transform: scale(1.2);
+}

@@ -18,6 +18,114 @@ let activeSession = {
   timerInterval: null
 };
 
+// Custom exercises & presets variables
+let customExercises = [];
+let customPresets = [];
+let presetBuilderExercises = []; // Temp list of { name, plannedSets } in builder modal
+let activeEditingPresetIndex = null; // null if creating, number if editing
+let activeCatalogueCategory = 'Legs';
+
+const DEFAULT_CATALOGUE = {
+  Legs: [
+    'Squats',
+    'Romanian Deadlifts',
+    'Leg Extensions',
+    'Leg Curls',
+    'Calf Raises',
+    'Lunges',
+    'Bulgarian Split Squats'
+  ],
+  Chest: [
+    'Barbell Bench Press',
+    'Dumbbell Bench Press',
+    'Incline Dumbbell Press',
+    'Chest Flyes',
+    'Push-ups',
+    'Dips'
+  ],
+  Back: [
+    'Barbell Rows',
+    'Pull-ups',
+    'Lat Pulldowns',
+    'Seated Cable Rows',
+    'Deadlifts',
+    'Face Pulls'
+  ],
+  Arms: [
+    'Bicep Curls',
+    'Hammer Curls',
+    'Tricep Pushdowns',
+    'Overhead Tricep Extensions',
+    'Chin-ups'
+  ],
+  Shoulders: [
+    'Overhead Shoulder Press',
+    'Lateral Raises',
+    'Front Raises',
+    'Rear Delt Flyes'
+  ],
+  Core: [
+    'Planks',
+    'Crunches',
+    'Hanging Leg Raises',
+    'Halos',
+    'Russian Twists'
+  ]
+};
+
+const DEFAULT_PRESETS = [
+  {
+    name: 'Leg Day',
+    description: 'Squats, RDLs, extensions, and calf raises.',
+    exercises: [
+      { name: 'Squats', plannedSets: 4 },
+      { name: 'Romanian Deadlifts', plannedSets: 4 },
+      { name: 'Leg Extensions', plannedSets: 3 },
+      { name: 'Calf Raises', plannedSets: 3 }
+    ]
+  },
+  {
+    name: 'Basic Arms',
+    description: 'Bicep curls, hammer curls, tricep extensions.',
+    exercises: [
+      { name: 'Bicep Curls', plannedSets: 4 },
+      { name: 'Tricep Pushdowns', plannedSets: 4 },
+      { name: 'Hammer Curls', plannedSets: 3 },
+      { name: 'Overhead Tricep Extensions', plannedSets: 3 }
+    ]
+  },
+  {
+    name: 'Chest & Shoulders',
+    description: 'Bench press, overhead press, lateral raises, dips.',
+    exercises: [
+      { name: 'Barbell Bench Press', plannedSets: 4 },
+      { name: 'Overhead Shoulder Press', plannedSets: 4 },
+      { name: 'Lateral Raises', plannedSets: 3 },
+      { name: 'Dips', plannedSets: 3 }
+    ]
+  },
+  {
+    name: 'Back & Core',
+    description: 'Pull-ups, barbell rows, planks, halos.',
+    exercises: [
+      { name: 'Pull-ups', plannedSets: 4 },
+      { name: 'Barbell Rows', plannedSets: 4 },
+      { name: 'Planks', plannedSets: 3 },
+      { name: 'Halos', plannedSets: 3 }
+    ]
+  },
+  {
+    name: 'Full Body Blast',
+    description: 'Squats, dumbbell bench, rows, shoulder press.',
+    exercises: [
+      { name: 'Squats', plannedSets: 4 },
+      { name: 'Dumbbell Bench Press', plannedSets: 4 },
+      { name: 'Barbell Rows', plannedSets: 4 },
+      { name: 'Shoulder Press', plannedSets: 3 }
+    ]
+  }
+];
+
 // State enum for workout flow screens
 const AppState = {
   WELCOME: 'screen-welcome',
@@ -42,6 +150,7 @@ const screens = {
 document.addEventListener('DOMContentLoaded', () => {
   loadTheme();
   loadLogsFromStorage();
+  loadCustomData();
   setupEventListeners();
   updateDateDisplays();
   updateDashboard();
@@ -404,37 +513,110 @@ function setupEventListeners() {
 
   // Spreadsheet Uploader
   const uploader = document.getElementById('spreadsheet-upload');
-  uploader.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      try {
-        const data = evt.target.result;
-        const workbook = XLSX.read(data, { type: 'binary' });
-        const sheetName = workbook.SheetNames[0];
-        const sheet = workbook.Sheets[sheetName];
-        const parsedData = XLSX.utils.sheet_to_json(sheet);
-        
-        if (parsedData.length > 0) {
-          mergeLogs(parsedData);
-          updateDashboard();
-          updateProfileStats();
-          alert(`Successfully imported ${parsedData.length} records!`);
-        } else {
-          alert('Spreadsheet is empty or could not be parsed.');
+  if (uploader) {
+    uploader.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        try {
+          const data = evt.target.result;
+          const workbook = XLSX.read(data, { type: 'binary' });
+          const sheetName = workbook.SheetNames[0];
+          const sheet = workbook.Sheets[sheetName];
+          const parsedData = XLSX.utils.sheet_to_json(sheet);
+          
+          if (parsedData.length > 0) {
+            mergeLogs(parsedData);
+            updateDashboard();
+            updateProfileStats();
+            alert(`Successfully imported ${parsedData.length} records!`);
+          } else {
+            alert('Spreadsheet is empty or could not be parsed.');
+          }
+        } catch (err) {
+          console.error(err);
+          alert('Failed to parse spreadsheet file.');
         }
-      } catch (err) {
-        console.error(err);
-        alert('Failed to parse spreadsheet file.');
+        uploader.value = ''; // Reset uploader input
+      };
+      reader.readAsBinaryString(file);
+    });
+  }
+
+  // CSV Exporter & Importer
+  const exportLogBtn = document.getElementById('export-log-btn');
+  if (exportLogBtn) {
+    exportLogBtn.addEventListener('click', exportCSV);
+  }
+  const importLogBtn = document.getElementById('import-log-btn');
+  if (importLogBtn) {
+    importLogBtn.addEventListener('click', () => {
+      document.getElementById('spreadsheet-upload').click();
+    });
+  }
+
+  // Presets Creator (Profile)
+  const createPresetBtn = document.getElementById('create-preset-btn');
+  if (createPresetBtn) {
+    createPresetBtn.addEventListener('click', () => {
+      openPresetBuilder();
+    });
+  }
+  const presetCancelBtn = document.getElementById('preset-cancel-btn');
+  if (presetCancelBtn) {
+    presetCancelBtn.addEventListener('click', () => {
+      document.getElementById('preset-builder-modal').classList.remove('active');
+    });
+  }
+  const presetSaveBtn = document.getElementById('preset-save-btn');
+  if (presetSaveBtn) {
+    presetSaveBtn.addEventListener('click', savePreset);
+  }
+  const presetAddExBtn = document.getElementById('preset-add-ex-btn');
+  if (presetAddExBtn) {
+    presetAddExBtn.addEventListener('click', addPresetExercise);
+  }
+  const presetExSearch = document.getElementById('preset-exercise-search');
+  if (presetExSearch) {
+    presetExSearch.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        addPresetExercise();
       }
-      uploader.value = ''; // Reset uploader input
-    };
-    reader.readAsBinaryString(file);
+    });
+  }
+
+  // Catalogue Drawer Toggle
+  const toggleCatalogueBtn = document.getElementById('toggle-catalogue-btn');
+  if (toggleCatalogueBtn) {
+    toggleCatalogueBtn.addEventListener('click', toggleCatalogueDrawer);
+  }
+
+  // Catalogue Categories Tab Pills
+  document.querySelectorAll('.cat-pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+      document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+      activeCatalogueCategory = pill.dataset.category;
+      renderCatalogueExerciseList();
+    });
   });
 
-  // CSV Exporter
-  document.getElementById('export-btn').addEventListener('click', exportCSV);
+  // Save Custom Exercise
+  const saveCustomExBtn = document.getElementById('save-custom-ex-btn');
+  if (saveCustomExBtn) {
+    saveCustomExBtn.addEventListener('click', saveCustomExercise);
+  }
+  const newCustomExName = document.getElementById('new-custom-ex-name');
+  if (newCustomExName) {
+    newCustomExName.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        saveCustomExercise();
+      }
+    });
+  }
 
   // Welcome Screen actions
   document.getElementById('start-session-btn').addEventListener('click', () => {
@@ -751,6 +933,8 @@ function updateDashboard() {
   populateExerciseSelect();
   renderLogsTable();
   populateExerciseAutocomplete();
+  renderPresets();
+  renderCatalogue();
   drawChart();
 }
 
@@ -829,11 +1013,14 @@ function renderCustomSelect() {
 
 function populateExerciseAutocomplete() {
   const datalist = document.getElementById('ex-autocomplete');
-  const exercises = [...new Set(logsData.map(r => r['Name of Exercise']))].filter(Boolean);
-  exercises.sort();
+  if (!datalist) return;
+  const logExercises = logsData.map(r => r['Name of Exercise']);
+  const catExercises = Object.values(DEFAULT_CATALOGUE).flat();
+  const allEx = [...new Set([...logExercises, ...catExercises, ...customExercises])].filter(Boolean);
+  allEx.sort();
   
   datalist.innerHTML = '';
-  exercises.forEach(ex => {
+  allEx.forEach(ex => {
     const opt = document.createElement('option');
     opt.value = ex;
     datalist.appendChild(opt);
@@ -1151,3 +1338,426 @@ function exportCSV() {
   link.click();
   document.body.removeChild(link);
 }
+
+// Load Custom Exercises and Presets from localStorage
+function loadCustomData() {
+  const storedEx = localStorage.getItem('progreso-custom-exercises');
+  if (storedEx) {
+    try {
+      customExercises = JSON.parse(storedEx);
+    } catch (e) {
+      console.error('Error loading custom exercises:', e);
+      customExercises = [];
+    }
+  }
+  
+  const storedPresets = localStorage.getItem('progreso-custom-presets');
+  if (storedPresets) {
+    try {
+      customPresets = JSON.parse(storedPresets);
+    } catch (e) {
+      console.error('Error loading custom presets:', e);
+      customPresets = [];
+    }
+  }
+}
+
+// Save Custom Exercises to localStorage
+function saveCustomExercises() {
+  localStorage.setItem('progreso-custom-exercises', JSON.stringify(customExercises));
+}
+
+// Save Custom Presets to localStorage
+function saveCustomPresets() {
+  localStorage.setItem('progreso-custom-presets', JSON.stringify(customPresets));
+}
+
+// Render presets lists in Profile and Workout welcome screens
+function renderPresets() {
+  renderPresetsInProfile();
+  renderPresetsOnWelcome();
+}
+
+// Renders the list of custom presets in the Profile section
+function renderPresetsInProfile() {
+  const container = document.getElementById('presets-management-list');
+  if (!container) return;
+  
+  container.innerHTML = '';
+  
+  if (customPresets.length === 0) {
+    container.innerHTML = '<p style="text-align: center; color: var(--text-secondary); font-size: 0.9rem; padding: 20px 0;">No custom presets created yet.</p>';
+    return;
+  }
+  
+  customPresets.forEach((preset, index) => {
+    const item = document.createElement('div');
+    item.className = 'preset-item';
+    
+    const exCount = preset.exercises.length;
+    const exNames = preset.exercises.map(e => e.name).join(', ');
+    const descText = exNames.length > 36 ? exNames.substring(0, 36) + '...' : exNames;
+    
+    item.innerHTML = `
+      <div class="preset-info">
+        <h4>${preset.name}</h4>
+        <p style="margin: 0; line-height: 1.2;">${exCount} exercise${exCount === 1 ? '' : 's'} • ${descText}</p>
+      </div>
+      <div class="preset-actions">
+        <button class="btn btn-secondary btn-icon" onclick="openPresetBuilder(${index})" style="width: 32px; height: 32px; border-radius: 8px; padding: 0;" title="Edit Preset">
+          <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+          </svg>
+        </button>
+        <button class="btn btn-danger btn-icon" onclick="deletePreset(${index})" style="width: 32px; height: 32px; border-radius: 8px; padding: 0;" title="Delete Preset">
+          <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
+        </button>
+      </div>
+    `;
+    container.appendChild(item);
+  });
+}
+
+// Renders presets on the welcome screen
+function renderPresetsOnWelcome() {
+  const customContainer = document.getElementById('welcome-custom-presets-list');
+  const defaultContainer = document.getElementById('welcome-default-presets-list');
+  
+  if (customContainer) {
+    customContainer.innerHTML = '';
+    if (customPresets.length === 0) {
+      customContainer.innerHTML = '<p style="color: var(--text-secondary); font-size: 0.85rem; font-style: italic; padding: 4px 0;">No custom presets. Create one in the Profile tab!</p>';
+    } else {
+      customPresets.forEach((preset, index) => {
+        const card = document.createElement('div');
+        card.className = 'preset-welcome-card';
+        const exCount = preset.exercises.length;
+        
+        card.innerHTML = `
+          <div>
+            <div class="p-name">${preset.name}</div>
+            <div class="p-desc">${exCount} exercise${exCount === 1 ? '' : 's'} planned</div>
+          </div>
+          <div class="p-arrow">→</div>
+        `;
+        
+        card.addEventListener('click', () => {
+          loadPresetIntoSession(preset);
+        });
+        
+        customContainer.appendChild(card);
+      });
+    }
+  }
+  
+  if (defaultContainer) {
+    defaultContainer.innerHTML = '';
+    DEFAULT_PRESETS.forEach((preset, index) => {
+      const card = document.createElement('div');
+      card.className = 'preset-welcome-card';
+      
+      card.innerHTML = `
+        <div>
+          <div class="p-name">${preset.name}</div>
+          <div class="p-desc">${preset.description}</div>
+        </div>
+        <div class="p-arrow">→</div>
+      `;
+      
+      card.addEventListener('click', () => {
+        loadPresetIntoSession(preset);
+      });
+      
+      defaultContainer.appendChild(card);
+    });
+  }
+}
+
+// Load a preset's exercises into the active session planner
+function loadPresetIntoSession(preset) {
+  activeSession.date = getTodayDateString();
+  
+  // Clone exercises from preset
+  activeSession.exercises = preset.exercises.map(ex => ({
+    name: ex.name,
+    plannedSets: ex.plannedSets,
+    actualSets: []
+  }));
+  
+  renderPlannedExercisesList();
+  transitionTo(AppState.PLAN_EXERCISES);
+}
+
+// Opens the preset builder modal
+window.openPresetBuilder = function(presetIndex = null) {
+  const modal = document.getElementById('preset-builder-modal');
+  const titleEl = document.getElementById('preset-modal-title');
+  const nameInput = document.getElementById('preset-name-input');
+  
+  if (!modal || !titleEl || !nameInput) return;
+  
+  activeEditingPresetIndex = presetIndex;
+  
+  // Clear inputs
+  document.getElementById('preset-exercise-search').value = '';
+  document.getElementById('preset-exercise-sets').value = '4';
+  
+  if (presetIndex === null) {
+    titleEl.textContent = 'Create Workout Preset';
+    nameInput.value = '';
+    presetBuilderExercises = [];
+  } else {
+    const preset = customPresets[presetIndex];
+    titleEl.textContent = 'Edit Workout Preset';
+    nameInput.value = preset.name;
+    // Deep clone exercises
+    presetBuilderExercises = preset.exercises.map(e => ({ ...e }));
+  }
+  
+  renderPresetBuilderExercises();
+  modal.classList.add('active');
+}
+
+// Renders the list of exercises inside the preset builder modal
+function renderPresetBuilderExercises() {
+  const listContainer = document.getElementById('preset-builder-exercises-list');
+  if (!listContainer) return;
+  
+  listContainer.innerHTML = '';
+  
+  if (presetBuilderExercises.length === 0) {
+    listContainer.innerHTML = '<p id="preset-builder-empty-msg" style="text-align: center; color: var(--text-secondary); font-size: 0.85rem; padding: 30px 10px;">No exercises added to this routine yet.</p>';
+    return;
+  }
+  
+  presetBuilderExercises.forEach((ex, idx) => {
+    const item = document.createElement('div');
+    item.style.display = 'flex';
+    item.style.justifyContent = 'space-between';
+    item.style.alignItems = 'center';
+    item.style.background = 'rgba(255,255,255,0.03)';
+    item.style.border = '1px solid rgba(255,255,255,0.06)';
+    item.style.borderRadius = '8px';
+    item.style.padding = '6px 12px';
+    item.style.fontSize = '0.85rem';
+    
+    item.innerHTML = `
+      <div>
+        <span style="font-weight:600; color:var(--text-primary);">${ex.name}</span>
+        <span style="color:var(--text-secondary); font-size:0.78rem; margin-left:6px;">(${ex.plannedSets} sets)</span>
+      </div>
+      <button class="btn btn-danger btn-icon" onclick="removePresetBuilderExercise(${idx})" style="width: 24px; height: 24px; border-radius: 6px; padding:0;">
+        <svg width="10" height="10" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+        </svg>
+      </button>
+    `;
+    listContainer.appendChild(item);
+  });
+}
+
+// Add exercise to preset builder list
+function addPresetExercise() {
+  const searchInput = document.getElementById('preset-exercise-search');
+  const setsInput = document.getElementById('preset-exercise-sets');
+  
+  const name = searchInput.value.trim();
+  const sets = parseInt(setsInput.value) || 4;
+  
+  if (!name) return;
+  
+  presetBuilderExercises.push({ name, plannedSets: sets });
+  searchInput.value = '';
+  setsInput.value = '4';
+  
+  renderPresetBuilderExercises();
+  searchInput.focus();
+}
+
+// Remove exercise from preset builder list
+window.removePresetBuilderExercise = function(index) {
+  presetBuilderExercises.splice(index, 1);
+  renderPresetBuilderExercises();
+};
+
+// Saves the preset to storage
+function savePreset() {
+  const nameInput = document.getElementById('preset-name-input');
+  const name = nameInput.value.trim();
+  
+  if (!name) {
+    alert('Please enter a name for the preset.');
+    nameInput.focus();
+    return;
+  }
+  
+  if (presetBuilderExercises.length === 0) {
+    alert('Please add at least one exercise to the routine.');
+    return;
+  }
+  
+  const presetData = {
+    name: name,
+    exercises: presetBuilderExercises.map(e => ({ name: e.name, plannedSets: e.plannedSets }))
+  };
+  
+  if (activeEditingPresetIndex === null) {
+    customPresets.push(presetData);
+  } else {
+    customPresets[activeEditingPresetIndex] = presetData;
+  }
+  
+  saveCustomPresets();
+  renderPresets();
+  
+  // Close modal
+  document.getElementById('preset-builder-modal').classList.remove('active');
+}
+
+// Deletes a custom preset
+window.deletePreset = function(index) {
+  if (confirm(`Are you sure you want to delete the preset "${customPresets[index].name}"?`)) {
+    customPresets.splice(index, 1);
+    saveCustomPresets();
+    renderPresets();
+  }
+};
+
+// Toggle the Catalogue Drawer
+function toggleCatalogueDrawer() {
+  const drawer = document.getElementById('catalogue-drawer');
+  const btn = document.getElementById('toggle-catalogue-btn');
+  if (!drawer || !btn) return;
+  
+  const isOpen = drawer.classList.toggle('open');
+  if (isOpen) {
+    btn.innerHTML = `
+      <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" style="margin-right: 6px;">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7"/>
+      </svg>
+      Hide Catalogue
+    `;
+    renderCatalogue();
+  } else {
+    btn.innerHTML = `
+      <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" style="margin-right: 6px;">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
+      </svg>
+      Browse Catalogue
+    `;
+  }
+}
+
+// Render the catalogue elements
+function renderCatalogue() {
+  renderCatalogueExerciseList();
+}
+
+// Render exercises list of active catalogue category
+function renderCatalogueExerciseList() {
+  const listContainer = document.getElementById('catalogue-exercise-list');
+  const customForm = document.getElementById('custom-exercise-builder');
+  
+  if (!listContainer || !customForm) return;
+  
+  listContainer.innerHTML = '';
+  
+  if (activeCatalogueCategory === 'Custom') {
+    customForm.style.display = 'block';
+    
+    if (customExercises.length === 0) {
+      listContainer.innerHTML = '<p style="text-align:center; color:var(--text-secondary); font-size:0.82rem; padding: 20px 0;">No custom exercises created yet. Create one below!</p>';
+      return;
+    }
+    
+    customExercises.forEach((ex, idx) => {
+      const item = document.createElement('div');
+      item.className = 'catalogue-item';
+      item.innerHTML = `
+        <span>${ex}</span>
+        <div style="display:flex; gap:10px; align-items:center;">
+          <button class="add-ex-btn" title="Add to Routine" onclick="addCatalogueExercise('${ex.replace(/'/g, "\\'")}')">
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+            </svg>
+          </button>
+          <button class="btn btn-danger btn-icon" onclick="deleteCustomExercise(${idx})" style="width:20px; height:20px; border-radius:4px; padding:0; justify-content:center; display:flex; align-items:center;" title="Delete Exercise">
+            <svg width="10" height="10" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </button>
+        </div>
+      `;
+      listContainer.appendChild(item);
+    });
+  } else {
+    customForm.style.display = 'none';
+    
+    const exercises = DEFAULT_CATALOGUE[activeCatalogueCategory] || [];
+    exercises.forEach(ex => {
+      const item = document.createElement('div');
+      item.className = 'catalogue-item';
+      item.innerHTML = `
+        <span>${ex}</span>
+        <button class="add-ex-btn" title="Add to Routine" onclick="addCatalogueExercise('${ex.replace(/'/g, "\\'")}')">
+          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+          </svg>
+        </button>
+      `;
+      listContainer.appendChild(item);
+    });
+  }
+}
+
+// Add exercise from catalogue list directly to planned exercises
+window.addCatalogueExercise = function(name) {
+  const setsInput = document.getElementById('plan-ex-sets');
+  const sets = parseInt(setsInput.value) || 4;
+  
+  activeSession.exercises.push({
+    name: name,
+    plannedSets: sets,
+    actualSets: []
+  });
+  
+  renderPlannedExercisesList();
+};
+
+// Deletes a custom exercise
+window.deleteCustomExercise = function(idx) {
+  const name = customExercises[idx];
+  if (confirm(`Are you sure you want to delete the custom exercise "${name}"?`)) {
+    customExercises.splice(idx, 1);
+    saveCustomExercises();
+    renderCatalogueExerciseList();
+    populateExerciseAutocomplete();
+  }
+};
+
+// Saves a new custom exercise
+function saveCustomExercise() {
+  const input = document.getElementById('new-custom-ex-name');
+  const name = input.value.trim();
+  
+  if (!name) return;
+  
+  // Duplicate check
+  const allEx = [...Object.values(DEFAULT_CATALOGUE).flat(), ...customExercises].map(s => s.toLowerCase());
+  if (allEx.includes(name.toLowerCase())) {
+    alert('An exercise with this name already exists in the catalogue!');
+    input.focus();
+    return;
+  }
+  
+  customExercises.push(name);
+  customExercises.sort();
+  saveCustomExercises();
+  
+  input.value = '';
+  renderCatalogueExerciseList();
+  populateExerciseAutocomplete();
+}
+

@@ -69,30 +69,19 @@
         </div>
       </section>
 
-      <!-- Database Actions Card -->
-      <section class="card storage-card">
-        <h3 class="card-title">Spreadsheet Sync</h3>
-        <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 20px;">
-          Upload your existing spreadsheet (Excel/CSV) to import historical workout data, or export your current log.
-        </p>
-        
-        <div style="display: flex; flex-direction: column; gap: 12px;">
-          <div class="file-input-wrapper" style="width: 100%;">
-            <button class="btn btn-secondary" style="width: 100%; justify-content: center; padding: 14px;">
-              <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
-              </svg>
-              Import Workout File
-            </button>
-            <input type="file" id="spreadsheet-upload" accept=".csv,.xlsx,.xls">
-          </div>
-          
-          <button class="btn btn-primary" id="export-btn" style="width: 100%; justify-content: center; padding: 14px;">
-            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-            </svg>
-            Export Backup CSV
+      <!-- Presets Management Card -->
+      <section class="card presets-card" style="margin-bottom: 24px;">
+        <div class="card-title" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+          <span>Workout Presets</span>
+          <button class="btn btn-primary" id="create-preset-btn" style="padding: 6px 14px; font-size: 0.85rem; border-radius: 8px;">
+            + Create
           </button>
+        </div>
+        <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 16px;">
+          Create custom routine structures in advance so you can start training instantly.
+        </p>
+        <div id="presets-management-list" style="display: flex; flex-direction: column; gap: 10px;">
+          <p style="text-align: center; color: var(--text-secondary); font-size: 0.9rem; padding: 20px 0;">No custom presets created yet.</p>
         </div>
       </section>
     </div>
@@ -110,26 +99,44 @@
         
         <!-- STATE 1: WELCOME SCREEN -->
         <div id="screen-welcome" class="state-screen active">
-          <div class="welcome-display">
+          <div class="welcome-display" style="padding: 16px 10px 10px 10px;">
             <div class="date-badge" id="welcome-date">25.05.2026</div>
             <h2>Ready to train?</h2>
-            <p>Track your exercises, log your sets, and sync your training stats offline.</p>
-            <button class="btn btn-primary" id="start-session-btn" style="padding: 16px 36px; font-size: 1.1rem; border-radius: 30px;">
-              Start Session
+            <p style="color: var(--text-secondary); margin-bottom: 20px; font-size: 0.9rem;">
+              Track exercises, log sets, and sync your stats offline.
+            </p>
+            <button class="btn btn-primary" id="start-session-btn" style="padding: 14px 32px; font-size: 1rem; border-radius: 30px; margin-bottom: 24px; width: 100%;">
+              Start Empty Session
             </button>
+
+            <!-- Custom Presets Section -->
+            <div class="presets-welcome-section" style="width: 100%; text-align: left; margin-bottom: 20px;">
+              <h4 style="font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px;">My Presets</h4>
+              <div id="welcome-custom-presets-list" style="display: flex; flex-direction: column; gap: 8px;">
+                <!-- Dynamically populated -->
+              </div>
+            </div>
+
+            <!-- Predefined Suggestions Section -->
+            <div class="presets-welcome-section" style="width: 100%; text-align: left;">
+              <h4 style="font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px;">Workout Suggestions</h4>
+              <div id="welcome-default-presets-list" style="display: flex; flex-direction: column; gap: 8px;">
+                <!-- Dynamically populated -->
+              </div>
+            </div>
           </div>
         </div>
 
         <!-- STATE 2: EXERCISE PLANNER -->
         <div id="screen-plan-exercises" class="state-screen">
           <h3 class="card-title">Plan Exercises</h3>
-          <p style="color: var(--text-secondary); margin-bottom: 20px; font-size: 0.9rem;">
-            What exercises are you planning to do today? Add them to your list.
+          <p style="color: var(--text-secondary); margin-bottom: 16px; font-size: 0.85rem;">
+            Add exercises to your active routine using quick search or browsing the catalogue.
           </p>
           
-          <div style="display: flex; gap: 8px; margin-bottom: 20px;">
+          <div style="display: flex; gap: 8px; margin-bottom: 12px;">
             <div style="flex: 2;">
-              <input type="text" id="plan-ex-name" placeholder="Exercise name (e.g. Squats)" list="ex-autocomplete">
+              <input type="text" id="plan-ex-name" placeholder="Quick search or type exercise..." list="ex-autocomplete">
               <datalist id="ex-autocomplete"></datalist>
             </div>
             <div style="flex: 1;">
@@ -142,11 +149,47 @@
             </button>
           </div>
 
+          <button class="btn btn-secondary" id="toggle-catalogue-btn" style="width: 100%; padding: 10px; font-size: 0.85rem; border-radius: 10px; margin-bottom: 16px; display: flex; justify-content: center; gap: 6px; align-items: center;">
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
+            </svg>
+            Browse Catalogue
+          </button>
+
+          <!-- Categorized Catalogue Drawer (collapsible) -->
+          <div id="catalogue-drawer" class="collapse-container">
+            <div style="background: rgba(255, 255, 255, 0.01); border: 1px solid var(--card-border); border-radius: 12px; padding: 12px; margin-bottom: 16px;">
+              <!-- Categories Tabs -->
+              <div class="catalogue-categories" style="display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 10px; -webkit-overflow-scrolling: touch; scrollbar-width: none;">
+                <button class="cat-pill active" data-category="Legs">Legs</button>
+                <button class="cat-pill" data-category="Chest">Chest</button>
+                <button class="cat-pill" data-category="Back">Back</button>
+                <button class="cat-pill" data-category="Arms">Arms</button>
+                <button class="cat-pill" data-category="Shoulders">Shoulders</button>
+                <button class="cat-pill" data-category="Core">Core</button>
+                <button class="cat-pill" data-category="Custom">My Exercises</button>
+              </div>
+              
+              <!-- Exercise List inside Drawer -->
+              <div id="catalogue-exercise-list" style="max-height: 160px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding-right: 4px;">
+                <!-- Dynamically populated -->
+              </div>
+              
+              <!-- Add Custom Exercise Sub-Form -->
+              <div id="custom-exercise-builder" style="display: none; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--card-border);">
+                <div style="display: flex; gap: 6px;">
+                  <input type="text" id="new-custom-ex-name" placeholder="New custom exercise name..." style="padding: 8px 12px; font-size: 0.85rem; flex: 1; border-radius: 8px;">
+                  <button class="btn btn-primary" id="save-custom-ex-btn" style="padding: 8px 14px; font-size: 0.85rem; border-radius: 8px;">Save</button>
+                </div>
+              </div>
+            </div>
+          </div>
+ 
           <!-- Planned List -->
-          <div id="planned-list" style="margin-bottom: 30px; max-height: 200px; overflow-y: auto;">
+          <div id="planned-list" style="margin-bottom: 20px; max-height: 180px; overflow-y: auto;">
             <p id="empty-plan-msg" style="text-align: center; color: var(--text-secondary); padding: 20px;">No exercises added yet.</p>
           </div>
-
+ 
           <div style="display: flex; justify-content: space-between;">
             <button class="btn btn-secondary" id="cancel-plan-btn">Cancel</button>
             <button class="btn btn-primary" id="confirm-plan-btn" disabled>Next</button>
@@ -321,7 +364,26 @@
       <!-- Collapsible Log Table Card -->
       <div id="history-collapse-container" class="collapse-container">
         <section class="card table-card" style="margin-bottom: 24px;">
-          <div class="card-title">Workout Logs</div>
+          <div class="card-title" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+            <span>Workout Logs</span>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <!-- Circle Import Button -->
+              <div class="file-input-wrapper" style="display: inline-block;">
+                <button class="btn btn-secondary btn-icon-round" id="import-log-btn" title="Import Workout File (Excel/CSV)">
+                  <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                  </svg>
+                </button>
+                <input type="file" id="spreadsheet-upload" accept=".csv,.xlsx,.xls" style="display: none;">
+              </div>
+              <!-- Circle Export Button -->
+              <button class="btn btn-secondary btn-icon-round" id="export-log-btn" title="Export Backup CSV">
+                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                </svg>
+              </button>
+            </div>
+          </div>
           <div class="table-wrapper">
             <table id="log-table">
               <thead>
@@ -397,8 +459,48 @@
     </div>
   </div>
 
+  <!-- PRESET BUILDER MODAL -->
+  <div id="preset-builder-modal" class="modal-overlay">
+    <div class="modal-content card" style="max-width: 400px; display: flex; flex-direction: column; max-height: 85vh;">
+      <h3 class="card-title" id="preset-modal-title">Create Workout Preset</h3>
+      
+      <div style="overflow-y: auto; flex: 1; padding-right: 4px; margin-bottom: 20px;">
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label for="preset-name-input">Preset Name</label>
+          <input type="text" id="preset-name-input" placeholder="e.g. Legs Blast, Pull Day" style="border-radius: 10px;">
+        </div>
+
+        <div style="border-top: 1px solid var(--card-border); padding-top: 16px; margin-bottom: 16px;">
+          <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px;">Add Exercises</label>
+          
+          <div style="display: flex; gap: 6px; margin-bottom: 12px;">
+            <div style="flex: 2;">
+              <input type="text" id="preset-exercise-search" placeholder="Select or search exercise..." list="ex-autocomplete" style="border-radius: 8px;">
+            </div>
+            <div style="flex: 1; max-width: 80px;">
+              <input type="number" id="preset-exercise-sets" placeholder="Sets" min="1" max="10" value="4" style="border-radius: 8px;">
+            </div>
+            <button class="btn btn-primary" id="preset-add-ex-btn" style="padding: 8px 12px; font-size: 0.85rem; border-radius: 8px;">Add</button>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 10px;">
+          <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px;">Preset Routine Exercises</label>
+          <div id="preset-builder-exercises-list" style="display: flex; flex-direction: column; gap: 8px; min-height: 100px; max-height: 200px; overflow-y: auto; background: rgba(0,0,0,0.25); border-radius: 12px; padding: 10px; border: 1px solid var(--card-border);">
+            <p id="preset-builder-empty-msg" style="text-align: center; color: var(--text-secondary); font-size: 0.85rem; padding: 30px 10px;">No exercises added to this routine yet.</p>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; gap: 12px; border-top: 1px solid var(--card-border); padding-top: 16px;">
+        <button class="btn btn-secondary" id="preset-cancel-btn" style="flex: 1;">Cancel</button>
+        <button class="btn btn-primary" id="preset-save-btn" style="flex: 1;">Save Preset</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Audio elements for rest timer complete beep -->
-  <audio id="beep-sound" src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==\"></audio>
+  <audio id="beep-sound" src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA=="></audio>
   
   <script src="app.js"></script>
 </body>
