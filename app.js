@@ -13,7 +13,7 @@ let activeSession = {
   timerInterval: null
 };
 
-// State enum
+// State enum for workout flow screens
 const AppState = {
   WELCOME: 'screen-welcome',
   PLAN_EXERCISES: 'screen-plan-exercises',
@@ -23,7 +23,7 @@ const AppState = {
   SUMMARY: 'screen-summary'
 };
 
-// UI Elements
+// UI Elements (workout screens)
 const screens = {
   [AppState.WELCOME]: document.getElementById('screen-welcome'),
   [AppState.PLAN_EXERCISES]: document.getElementById('screen-plan-exercises'),
@@ -40,6 +40,9 @@ document.addEventListener('DOMContentLoaded', () => {
   setupEventListeners();
   updateDateDisplays();
   updateDashboard();
+  
+  // Set default tab to workout
+  switchTab('workout');
 });
 
 // Setup date display formatted as DD.MM.YYYY
@@ -55,6 +58,62 @@ function getTodayDateString() {
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const year = d.getFullYear();
   return `${day}.${month}.${year}`;
+}
+
+// Bottom Navigation Tab Selector
+function switchTab(tabName) {
+  // Hide all tab panels and clear navigation item states
+  document.querySelectorAll('.tab-panel').forEach(panel => {
+    panel.classList.remove('active');
+  });
+  document.querySelectorAll('.nav-item').forEach(item => {
+    item.classList.remove('active');
+  });
+  
+  // Activate target panel & tab item
+  const targetPanel = document.getElementById(`panel-${tabName}`);
+  if (targetPanel) {
+    targetPanel.classList.add('active');
+  }
+  
+  const targetTab = document.querySelector(`.nav-item[data-tab="${tabName}"]`);
+  if (targetTab) {
+    targetTab.classList.add('active');
+  }
+  
+  // Handle tab specific events
+  if (tabName === 'analytics') {
+    // Redraw chart with slight delay to ensure container height calculation is correct
+    setTimeout(() => {
+      drawChart();
+    }, 50);
+  } else if (tabName === 'profile') {
+    updateProfileStats();
+  }
+}
+
+// Update profile metrics block
+function updateProfileStats() {
+  const workoutsCountEl = document.getElementById('profile-workouts-count');
+  const exercisesCountEl = document.getElementById('profile-exercises-count');
+  
+  if (workoutsCountEl && exercisesCountEl) {
+    // Calculate unique training dates
+    const uniqueDates = new Set(logsData.map(r => r['Date']).filter(Boolean));
+    workoutsCountEl.textContent = uniqueDates.size;
+    
+    // Calculate total sets performed
+    let totalSets = 0;
+    logsData.forEach(row => {
+      let setIdx = 1;
+      while (true) {
+        if (row[`${setIdx} (reps)`] === undefined && setIdx > 4) break;
+        if (row[`${setIdx} (reps)`]) totalSets++;
+        setIdx++;
+      }
+    });
+    exercisesCountEl.textContent = totalSets;
+  }
 }
 
 // Accent Color Theme Handler
@@ -222,7 +281,7 @@ function sortLogsChronologically() {
   });
 }
 
-// Layout Transition State Machine
+// Layout Transition State Machine (inside workout panel)
 function transitionTo(state) {
   Object.values(screens).forEach(screen => screen.classList.remove('active'));
   const target = screens[state];
@@ -238,6 +297,14 @@ function transitionTo(state) {
 
 // Event Listeners Configuration
 function setupEventListeners() {
+  // Bottom Tab Navigation switching listeners
+  document.querySelectorAll('.nav-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const tabName = item.dataset.tab;
+      switchTab(tabName);
+    });
+  });
+
   // Theme changes
   document.querySelectorAll('.theme-dot').forEach(dot => {
     dot.addEventListener('click', () => selectTheme(dot.dataset.theme));
@@ -260,6 +327,7 @@ function setupEventListeners() {
         if (parsedData.length > 0) {
           mergeLogs(parsedData);
           updateDashboard();
+          updateProfileStats();
           alert(`Successfully imported ${parsedData.length} records!`);
         } else {
           alert('Spreadsheet is empty or could not be parsed.');
@@ -410,13 +478,12 @@ function startActiveExerciseTracking() {
   transitionTo(AppState.WAIT_REPS);
 }
 
+// Looks up the last weight logged for a particular exercise
 function findLastUsedWeight(exerciseName) {
-  // Search backward in logsData for this exercise
   const lowerExName = exerciseName.toLowerCase();
   for (let i = logsData.length - 1; i >= 0; i--) {
     const row = logsData[i];
     if (row['Name of Exercise'] && row['Name of Exercise'].toLowerCase() === lowerExName) {
-      // Find the first non-empty set weight
       for (let s = 1; s <= 10; s++) {
         if (row[`${s} (kg)`]) {
           return row[`${s} (kg)`];
@@ -443,15 +510,12 @@ function logCurrentSet() {
   const currentEx = activeSession.exercises[activeSession.currentExerciseIndex];
   currentEx.actualSets.push({ weight, reps });
   
-  // Check if we need to progress to the next set or next exercise
   const isLastSet = activeSession.currentSetIndex === currentEx.plannedSets - 1;
   const isLastExercise = activeSession.currentExerciseIndex === activeSession.exercises.length - 1;
   
   if (isLastSet && isLastExercise) {
-    // Workout completed!
     saveCompletedSession();
   } else {
-    // Show Rest Timer
     startRestTimer(isLastSet);
   }
 }
@@ -476,8 +540,6 @@ function startRestTimer(isLastSetOfExercise) {
   const progressRing = document.getElementById('timer-progress-ring');
   
   countdownText.textContent = formatTime(timeLeft);
-  
-  // Reset circular progress bar stroke offset
   progressRing.style.strokeDashoffset = 0;
   
   clearInterval(activeSession.timerInterval);
@@ -545,7 +607,6 @@ function playBeep() {
 
 // Summary Screen Implementation
 function saveCompletedSession() {
-  // Convert activeSession exercises into spreadsheet-compliant rows
   const newRows = activeSession.exercises.map(ex => {
     const row = {
       'Date': activeSession.date,
@@ -560,7 +621,7 @@ function saveCompletedSession() {
     return row;
   });
   
-  // Merge with our logs database
+  // Merge with logs database
   mergeLogs(newRows);
   
   // Update Summary counts
@@ -571,6 +632,7 @@ function saveCompletedSession() {
   
   // Refresh views
   updateDashboard();
+  updateProfileStats();
   
   transitionTo(AppState.SUMMARY);
 }
@@ -587,7 +649,6 @@ function populateExerciseSelect() {
   const select = document.getElementById('exercise-chart-selector');
   const currentValue = select.value;
   
-  // Extract unique exercise names
   const exercises = [...new Set(logsData.map(r => r['Name of Exercise']))].filter(Boolean);
   exercises.sort();
   
@@ -599,11 +660,9 @@ function populateExerciseSelect() {
     select.appendChild(opt);
   });
   
-  // Restore selection if it still exists
   if (exercises.includes(currentValue)) {
     select.value = currentValue;
   } else if (exercises.length > 0) {
-    // Default to first exercise
     select.value = exercises[0];
   }
 }
@@ -629,7 +688,7 @@ function renderLogsTable() {
     tbody.innerHTML = `
       <tr>
         <td colspan="6" style="text-align: center; color: var(--text-secondary); padding: 40px 0;">
-          No workout logs loaded. Use the "Import Spreadsheet" button above to upload your history.
+          No workout logs loaded.
         </td>
       </tr>
     `;
@@ -659,10 +718,9 @@ function renderLogsTable() {
       const reps = row[`${s} (reps)`];
       
       if (kg !== undefined && kg !== '' && reps !== undefined && reps !== '') {
-        td.innerHTML = `<span style="color:var(--text-primary); font-weight:600;">${kg}</span> <span style="color:var(--text-secondary); font-size:0.8rem;">kg</span> × <span style="color:var(--accent-color); font-weight:600;">${reps}</span>`;
+        td.innerHTML = `<span style="color:var(--text-primary); font-weight:600;">${kg}</span> <span style="color:var(--text-secondary); font-size:0.75rem;">kg</span> × <span style="color:var(--accent-color); font-weight:600;">${reps}</span>`;
       } else if (reps !== undefined && reps !== '') {
-        // Handle set containing reps only (no weight)
-        td.innerHTML = `<span style="color:var(--accent-color); font-weight:600;">${reps}</span> <span style="color:var(--text-secondary); font-size:0.8rem;">reps</span>`;
+        td.innerHTML = `<span style="color:var(--accent-color); font-weight:600;">${reps}</span> <span style="color:var(--text-secondary); font-size:0.75rem;">reps</span>`;
       } else {
         td.textContent = '—';
         td.style.color = 'var(--text-secondary)';
@@ -676,11 +734,9 @@ function renderLogsTable() {
 }
 
 function calculateOneRepMax(weight, repsStr) {
-  // Parse reps. If composite string like '7/2', grab first numeric digit.
   const reps = parseInt(String(repsStr).match(/\d+/)) || 0;
   if (reps <= 0 || weight <= 0) return 0;
   if (reps === 1) return weight;
-  // Epley 1RM formula
   return weight * (1 + reps / 30);
 }
 
@@ -695,13 +751,13 @@ function drawChart() {
   }
   
   if (!selectedEx || logsData.length === 0) {
-    placeholder.style.display = 'block';
-    canvas.style.display = 'none';
+    if (placeholder) placeholder.style.display = 'block';
+    if (canvas) canvas.style.display = 'none';
     return;
   }
   
-  placeholder.style.display = 'none';
-  canvas.style.display = 'block';
+  if (placeholder) placeholder.style.display = 'none';
+  if (canvas) canvas.style.display = 'block';
   
   // Filter and parse logs for selected exercise
   const exerciseLogs = logsData.filter(r => 
@@ -709,12 +765,11 @@ function drawChart() {
   );
   
   if (exerciseLogs.length === 0) {
-    placeholder.style.display = 'block';
-    canvas.style.display = 'none';
+    if (placeholder) placeholder.style.display = 'block';
+    if (canvas) canvas.style.display = 'none';
     return;
   }
   
-  // Parse dates and calculate metrics
   const labels = [];
   const oneRmValues = [];
   const volumeValues = [];
@@ -725,16 +780,12 @@ function drawChart() {
     let max1RM = 0;
     let totalVolume = 0;
     
-    // Loop through all sets in row
     let setIndex = 1;
     while (true) {
       const kgKey = `${setIndex} (kg)`;
       const repsKey = `${setIndex} (reps)`;
       
-      // Stop checking if no keys exist anymore for this set index (check at least up to 4)
-      if (row[kgKey] === undefined && row[repsKey] === undefined && setIndex > 4) {
-        break;
-      }
+      if (row[kgKey] === undefined && row[repsKey] === undefined && setIndex > 4) break;
       
       const kgVal = parseFloat(row[kgKey]) || 0;
       const repsVal = row[repsKey] || '';
@@ -743,10 +794,8 @@ function drawChart() {
       if (repsInt > 0) {
         const set1RM = calculateOneRepMax(kgVal, repsVal);
         if (set1RM > max1RM) max1RM = set1RM;
-        
         totalVolume += kgVal * repsInt;
       }
-      
       setIndex++;
     }
     
@@ -754,16 +803,13 @@ function drawChart() {
     volumeValues.push(totalVolume);
   });
 
-  // Get active neon color definitions
   const bodyStyles = getComputedStyle(document.body);
   const accentColor = bodyStyles.getPropertyValue('--accent-color').trim() || '#bd00ff';
-  const glowColor = bodyStyles.getPropertyValue('--accent-glow').trim() || 'rgba(189, 0, 255, 0.4)';
   
   const ctx = canvas.getContext('2d');
   
-  // Create gradient fills
-  const volumeGradient = ctx.createLinearGradient(0, 0, 0, 300);
-  volumeGradient.addColorStop(0, accentColor + '22'); // 13% opacity
+  const volumeGradient = ctx.createLinearGradient(0, 0, 0, 260);
+  volumeGradient.addColorStop(0, accentColor + '20');
   volumeGradient.addColorStop(1, accentColor + '00');
   
   chartInstance = new Chart(ctx, {
@@ -778,21 +824,19 @@ function drawChart() {
           borderWidth: 3,
           pointBackgroundColor: accentColor,
           pointBorderColor: '#ffffff',
-          pointHoverRadius: 7,
+          pointHoverRadius: 6,
           pointRadius: 4,
           tension: 0.25,
-          yAxisID: 'y-1rm',
-          shadowColor: accentColor,
-          shadowBlur: 10
+          yAxisID: 'y-1rm'
         },
         {
           label: 'Total Volume (kg)',
           data: volumeValues,
           backgroundColor: volumeGradient,
-          borderColor: accentColor + '66', // 40% opacity
+          borderColor: accentColor + '50',
           borderWidth: 1.5,
-          pointBackgroundColor: accentColor + '88',
-          pointRadius: 3,
+          pointBackgroundColor: accentColor + '70',
+          pointRadius: 2.5,
           fill: true,
           tension: 0.2,
           yAxisID: 'y-vol'
@@ -812,66 +856,47 @@ function drawChart() {
           position: 'top',
           labels: {
             color: '#f5f6f8',
-            font: {
-              family: 'Outfit',
-              size: 11
-            }
+            font: { family: 'Outfit', size: 10 }
           }
         },
         tooltip: {
           backgroundColor: 'rgba(25, 27, 38, 0.95)',
-          titleFont: { family: 'Outfit', size: 12, weight: 'bold' },
-          bodyFont: { family: 'Outfit', size: 12 },
-          borderColor: accentColor + '44',
+          titleFont: { family: 'Outfit', size: 11, weight: 'bold' },
+          bodyFont: { family: 'Outfit', size: 11 },
+          borderColor: accentColor + '30',
           borderWidth: 1,
-          padding: 10,
           cornerRadius: 8
         }
       },
       scales: {
         x: {
-          grid: {
-            color: 'rgba(255, 255, 255, 0.04)'
-          },
-          ticks: {
-            color: '#8f94a6',
-            font: { family: 'Outfit', size: 10 }
-          }
+          grid: { color: 'rgba(255, 255, 255, 0.03)' },
+          ticks: { color: '#8f94a6', font: { family: 'Outfit', size: 9 } }
         },
         'y-1rm': {
           type: 'linear',
           display: true,
           position: 'left',
-          grid: {
-            color: 'rgba(255, 255, 255, 0.04)'
-          },
-          ticks: {
-            color: '#f5f6f8',
-            font: { family: 'Outfit', size: 10 }
-          },
+          grid: { color: 'rgba(255, 255, 255, 0.03)' },
+          ticks: { color: '#f5f6f8', font: { family: 'Outfit', size: 9 } },
           title: {
             display: true,
-            text: '1-Rep Max (kg)',
+            text: '1RM (kg)',
             color: '#f5f6f8',
-            font: { family: 'Outfit', size: 11, weight: 'bold' }
+            font: { family: 'Outfit', size: 10, weight: 'bold' }
           }
         },
         'y-vol': {
           type: 'linear',
           display: true,
           position: 'right',
-          grid: {
-            drawOnChartArea: false // prevent overlaying grid lines
-          },
-          ticks: {
-            color: '#8f94a6',
-            font: { family: 'Outfit', size: 10 }
-          },
+          grid: { drawOnChartArea: false },
+          ticks: { color: '#8f94a6', font: { family: 'Outfit', size: 9 } },
           title: {
             display: true,
             text: 'Volume (kg)',
             color: '#8f94a6',
-            font: { family: 'Outfit', size: 11, weight: 'bold' }
+            font: { family: 'Outfit', size: 10, weight: 'bold' }
           }
         }
       }
@@ -886,8 +911,7 @@ function exportCSV() {
     return;
   }
   
-  // Find maximum set index across all logs to create dynamic columns
-  let maxSets = 4; // default minimum
+  let maxSets = 4;
   logsData.forEach(row => {
     Object.keys(row).forEach(k => {
       const match = k.match(/^(\d+)\s*\(reps\)/i);
@@ -898,18 +922,15 @@ function exportCSV() {
     });
   });
   
-  // Build header keys
   const headers = ['Date', 'Name of Exercise'];
   for (let s = 1; s <= maxSets; s++) {
     headers.push(`${s} (kg)`);
     headers.push(`${s} (reps)`);
   }
   
-  // Format rows using standard headers
   const csvRows = logsData.map(row => {
     return headers.map(header => {
       const cell = row[header] !== undefined && row[header] !== null ? String(row[header]) : '';
-      // Escape cell strings with quotes if they contain commas or quotes
       if (cell.includes(',') || cell.includes('"') || cell.includes('\n')) {
         return `"${cell.replace(/"/g, '""')}"`;
       }
@@ -917,9 +938,8 @@ function exportCSV() {
     }).join(',');
   });
   
-  // Combine headers and rows
   const csvContent = [headers.join(','), ...csvRows].join('\n');
-  const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' }); // UTF-8 BOM
+  const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
   
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
