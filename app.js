@@ -156,6 +156,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupEventListeners();
   updateDateDisplays();
   updateDashboard();
+  updateSeriesToggleButtons();
   
   // Set default tab to workout
   switchTab('workout');
@@ -687,6 +688,8 @@ function setupEventListeners() {
       document.querySelectorAll('#chart-mode-selector .chart-mode-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       activeChartMode = btn.dataset.mode;
+      
+      updateSeriesToggleButtons();
       
       const exWrapper = document.getElementById('exercise-select-wrapper');
       const muscleWrapper = document.getElementById('muscle-group-select-wrapper');
@@ -1393,7 +1396,7 @@ function drawChart() {
       
       const date = row['Date'];
       if (!dateMap.has(date)) {
-        dateMap.set(date, { totalVolume: 0, totalSets: 0 });
+        dateMap.set(date, { totalVolume: 0 });
       }
       
       const dateData = dateMap.get(date);
@@ -1409,7 +1412,6 @@ function drawChart() {
         
         if (repsInt > 0) {
           dateData.totalVolume += kgVal * repsInt;
-          dateData.totalSets++;
         }
         setIndex++;
       }
@@ -1417,8 +1419,7 @@ function drawChart() {
     
     const dataPoints = Array.from(dateMap.entries()).map(([date, data]) => ({
       date,
-      volume: data.totalVolume,
-      sets: data.totalSets
+      volume: data.totalVolume
     }));
     
     if (dataPoints.length === 0) {
@@ -1430,7 +1431,13 @@ function drawChart() {
       return;
     }
     
+    // Sort chronologically and compute running cumulative sum
     dataPoints.sort((a, b) => parseDateStr(a.date) - parseDateStr(b.date));
+    let runningVolume = 0;
+    dataPoints.forEach(pt => {
+      runningVolume += pt.volume;
+      pt.cumulativeVolume = runningVolume;
+    });
     
     let latestDate = new Date(0);
     dataPoints.forEach(pt => {
@@ -1457,40 +1464,59 @@ function drawChart() {
       return;
     }
     
+    if (!showVolumeSeries && !showOneRmSeries) {
+      if (placeholder) {
+        placeholder.style.display = 'block';
+        placeholder.innerHTML = '<p>Toggle at least one data series (Daily or Cumulative Volume) to view the graph.</p>';
+      }
+      if (canvas) canvas.style.display = 'none';
+      return;
+    }
+    
     const labels = filteredPoints.map(pt => pt.date);
     const volumeValues = filteredPoints.map(pt => pt.volume);
-    const setsValues = filteredPoints.map(pt => pt.sets);
+    const cumulativeValues = filteredPoints.map(pt => pt.cumulativeVolume);
     
     const bodyStyles = getComputedStyle(document.body);
     const accentColor = bodyStyles.getPropertyValue('--accent-color').trim() || '#bd00ff';
     const ctx = canvas.getContext('2d');
     const datasets = [];
     
-    // Total Volume dataset (Left axis)
-    datasets.push({
-      label: 'Total Volume (kg)',
-      data: volumeValues,
-      borderColor: accentColor,
-      borderWidth: 3,
-      pointBackgroundColor: accentColor,
-      pointBorderColor: '#ffffff',
-      pointHoverRadius: 6,
-      pointRadius: 4,
-      tension: 0.25,
-      yAxisID: 'y-vol'
-    });
+    // Daily Volume dataset (Left axis)
+    if (showVolumeSeries) {
+      const dailyGradient = ctx.createLinearGradient(0, 0, 0, 250);
+      dailyGradient.addColorStop(0, accentColor + '20');
+      dailyGradient.addColorStop(1, accentColor + '00');
+      
+      datasets.push({
+        label: 'Daily Volume (kg)',
+        data: volumeValues,
+        backgroundColor: dailyGradient,
+        borderColor: accentColor,
+        borderWidth: 3,
+        pointBackgroundColor: accentColor,
+        pointBorderColor: '#ffffff',
+        pointHoverRadius: 6,
+        pointRadius: 4,
+        tension: 0.25,
+        fill: true,
+        yAxisID: 'y-daily'
+      });
+    }
     
-    // Sets completed dataset (Right axis)
-    datasets.push({
-      label: 'Working Sets Completed',
-      data: setsValues,
-      borderColor: '#ffffff',
-      borderWidth: 2,
-      pointBackgroundColor: '#ffffff',
-      pointRadius: 3,
-      tension: 0.2,
-      yAxisID: 'y-sets'
-    });
+    // Cumulative Volume dataset (Right axis)
+    if (showOneRmSeries) {
+      datasets.push({
+        label: 'Cumulative Volume (kg)',
+        data: cumulativeValues,
+        borderColor: '#ffffff',
+        borderWidth: 2.5,
+        pointBackgroundColor: '#ffffff',
+        pointRadius: 3,
+        tension: 0.2,
+        yAxisID: 'y-cumulative'
+      });
+    }
     
     chartInstance = new Chart(ctx, {
       type: 'line',
@@ -1528,28 +1554,28 @@ function drawChart() {
             grid: { color: 'rgba(255, 255, 255, 0.03)' },
             ticks: { color: '#8f94a6', font: { family: 'Outfit', size: 9 } }
           },
-          'y-vol': {
+          'y-daily': {
             type: 'linear',
-            display: true,
+            display: showVolumeSeries,
             position: 'left',
             grid: { color: 'rgba(255, 255, 255, 0.03)' },
             ticks: { color: '#f5f6f8', font: { family: 'Outfit', size: 9 } },
             title: {
               display: true,
-              text: 'Volume (kg)',
+              text: 'Daily Volume (kg)',
               color: '#f5f6f8',
               font: { family: 'Outfit', size: 10, weight: 'bold' }
             }
           },
-          'y-sets': {
+          'y-cumulative': {
             type: 'linear',
-            display: true,
+            display: showOneRmSeries,
             position: 'right',
             grid: { drawOnChartArea: false },
-            ticks: { color: '#8f94a6', font: { family: 'Outfit', size: 9 }, stepSize: 1 },
+            ticks: { color: '#8f94a6', font: { family: 'Outfit', size: 9 } },
             title: {
               display: true,
-              text: 'Sets Completed',
+              text: 'Cumulative Volume (kg)',
               color: '#8f94a6',
               font: { family: 'Outfit', size: 10, weight: 'bold' }
             }
@@ -2217,6 +2243,25 @@ function renderMuscleBreakdown() {
     `;
     container.appendChild(row);
   });
+}
+
+// Update the series filter button text dynamically based on the active chart mode
+function updateSeriesToggleButtons() {
+  const volBtn = document.getElementById('toggle-vol-btn');
+  const oneRmBtn = document.getElementById('toggle-1rm-btn');
+  const infoBtn = document.getElementById('one-rm-info-btn');
+  
+  if (!volBtn || !oneRmBtn) return;
+  
+  if (activeChartMode === 'exercise') {
+    volBtn.textContent = 'Total Amount Lifted';
+    oneRmBtn.textContent = 'One Rep Max';
+    if (infoBtn) infoBtn.style.display = 'inline-flex';
+  } else {
+    volBtn.textContent = 'Daily Volume';
+    oneRmBtn.textContent = 'Cumulative Volume';
+    if (infoBtn) infoBtn.style.display = 'none';
+  }
 }
 
 

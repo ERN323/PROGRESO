@@ -381,18 +381,33 @@ body.theme-white .btn-primary {
 }
 
 /* Circular Timer Progress */
+#screen-track-timer {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  flex-grow: 1;
+  padding: 10px 0;
+}
+
+#screen-track-timer.active {
+  display: flex;
+}
+
 .timer-container {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  margin: 20px 0;
+  margin: 15px 0;
+  width: 100%;
 }
 
 .timer-circle {
   position: relative;
-  width: 170px;
-  height: 170px;
+  width: 230px;
+  height: 230px;
 }
 
 .timer-circle svg {
@@ -403,7 +418,7 @@ body.theme-white .btn-primary {
 
 .timer-circle circle {
   fill: none;
-  stroke-width: 8;
+  stroke-width: 10;
 }
 
 .timer-circle .bg-ring {
@@ -416,7 +431,7 @@ body.theme-white .btn-primary {
   stroke-dasharray: 502; /* 2 * PI * r (r=80) */
   stroke-dashoffset: 0;
   transition: stroke-dashoffset 0.1s linear, stroke 0.3s;
-  filter: drop-shadow(0 0 6px var(--accent-color));
+  filter: drop-shadow(0 0 8px var(--accent-color));
 }
 
 .timer-text {
@@ -424,7 +439,7 @@ body.theme-white .btn-primary {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  font-size: 2rem;
+  font-size: 3rem;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   letter-spacing: -1px;
