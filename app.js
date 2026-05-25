@@ -3,6 +3,11 @@ let logsData = [];
 let chartInstance = null;
 let currentTheme = 'purple';
 
+// Interactive chart filter states
+let activeChartTimeframe = 'all'; // '7d', '30d', 'all'
+let showVolumeSeries = true;
+let showOneRmSeries = true;
+
 // Active session variables
 let activeSession = {
   date: '',
@@ -98,11 +103,9 @@ function updateProfileStats() {
   const exercisesCountEl = document.getElementById('profile-exercises-count');
   
   if (workoutsCountEl && exercisesCountEl) {
-    // Calculate unique training dates
     const uniqueDates = new Set(logsData.map(r => r['Date']).filter(Boolean));
     workoutsCountEl.textContent = uniqueDates.size;
     
-    // Calculate total sets performed
     let totalSets = 0;
     logsData.forEach(row => {
       let setIdx = 1;
@@ -217,12 +220,10 @@ function normalizeImportedData(data) {
   return data.map(row => {
     const normalized = {};
     
-    // Find exercise name key (case insensitive check)
     const nameKey = Object.keys(row).find(k => 
       k.toLowerCase().includes('exercise') || k.toLowerCase().includes('name')
     ) || 'Name of Exercise';
     
-    // Find date key
     const dateKey = Object.keys(row).find(k => 
       k.toLowerCase().includes('date')
     ) || 'Date';
@@ -230,7 +231,6 @@ function normalizeImportedData(data) {
     normalized['Date'] = row[dateKey] ? String(row[dateKey]).trim() : '';
     normalized['Name of Exercise'] = row[nameKey] ? String(row[nameKey]).trim() : '';
     
-    // Find all weight and reps columns matching e.g., '1 (kg)' or '1 (reps)'
     Object.keys(row).forEach(k => {
       const cleanKey = k.trim();
       const kgMatch = cleanKey.match(/^(\d+)\s*\(kg\)/i);
@@ -250,7 +250,6 @@ function normalizeImportedData(data) {
 function mergeLogs(newData) {
   const normalizedNew = normalizeImportedData(newData);
   
-  // Merge logs based on Date + Exercise Name unique key
   const existingMap = new Map();
   logsData.forEach(row => {
     const key = `${row['Date']}||${row['Name of Exercise']}`;
@@ -259,10 +258,9 @@ function mergeLogs(newData) {
   
   normalizedNew.forEach(row => {
     const key = `${row['Date']}||${row['Name of Exercise']}`;
-    existingMap.set(key, row); // Uploaded spreadsheet overrides or appends
+    existingMap.set(key, row);
   });
   
-  // Convert map back to array and sort chronologically
   logsData = Array.from(existingMap.values());
   sortLogsChronologically();
   saveLogsToStorage();
@@ -281,14 +279,21 @@ function sortLogsChronologically() {
   });
 }
 
+// Helper to parse DD.MM.YYYY to Date object
+function parseDateStr(str) {
+  const parts = str.split('.');
+  if (parts.length === 3) {
+    return new Date(parts[2], parts[1] - 1, parts[0]);
+  }
+  return new Date(0);
+}
+
 // Layout Transition State Machine (inside workout panel)
 function transitionTo(state) {
   Object.values(screens).forEach(screen => screen.classList.remove('active'));
   const target = screens[state];
   if (target) {
     target.classList.add('active');
-    
-    // Focus adjustments for UX
     if (state === AppState.WAIT_REPS) {
       document.getElementById('set-reps-input').focus();
     }
@@ -297,13 +302,100 @@ function transitionTo(state) {
 
 // Event Listeners Configuration
 function setupEventListeners() {
-  // Bottom Tab Navigation switching listeners
+  // Bottom Tab Navigation switching
   document.querySelectorAll('.nav-item').forEach(item => {
     item.addEventListener('click', () => {
       const tabName = item.dataset.tab;
       switchTab(tabName);
     });
   });
+
+  // Timeframe selector click events
+  document.querySelectorAll('.timeframe-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.timeframe-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeChartTimeframe = btn.dataset.timeframe;
+      drawChart();
+    });
+  });
+
+  // Series toggles click events
+  const volBtn = document.getElementById('toggle-vol-btn');
+  const oneRmBtn = document.getElementById('toggle-1rm-btn');
+
+  if (volBtn) {
+    volBtn.addEventListener('click', () => {
+      showVolumeSeries = !showVolumeSeries;
+      volBtn.classList.toggle('active', showVolumeSeries);
+      drawChart();
+    });
+  }
+
+  if (oneRmBtn) {
+    oneRmBtn.addEventListener('click', () => {
+      showOneRmSeries = !showOneRmSeries;
+      oneRmBtn.classList.toggle('active', showOneRmSeries);
+      drawChart();
+    });
+  }
+
+  // Info Modal trigger listeners
+  const infoBtn = document.getElementById('one-rm-info-btn');
+  const closeModalBtn = document.getElementById('close-modal-btn');
+  const infoModal = document.getElementById('info-modal');
+
+  if (infoBtn && infoModal) {
+    infoBtn.addEventListener('click', () => {
+      infoModal.classList.add('active');
+    });
+  }
+
+  if (closeModalBtn && infoModal) {
+    closeModalBtn.addEventListener('click', () => {
+      infoModal.classList.remove('active');
+    });
+  }
+
+  // Close modal when clicking on the dark backdrop
+  if (infoModal) {
+    infoModal.addEventListener('click', (e) => {
+      if (e.target === infoModal) {
+        infoModal.classList.remove('active');
+      }
+    });
+  }
+
+  // Collapsible History Log Table
+  const toggleHistoryBtn = document.getElementById('toggle-history-btn');
+  const historyContainer = document.getElementById('history-collapse-container');
+
+  if (toggleHistoryBtn && historyContainer) {
+    toggleHistoryBtn.addEventListener('click', () => {
+      const isOpen = historyContainer.classList.toggle('open');
+      
+      // Update button visual state and text
+      if (isOpen) {
+        toggleHistoryBtn.innerHTML = `
+          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" style="margin-right: 8px;">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7"/>
+          </svg>
+          Hide History
+        `;
+        // Smooth scroll to history container
+        setTimeout(() => {
+          historyContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }, 100);
+      } else {
+        toggleHistoryBtn.innerHTML = `
+          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" style="margin-right: 8px;">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          History
+        `;
+      }
+    });
+  }
 
   // Theme changes
   document.querySelectorAll('.theme-dot').forEach(dot => {
@@ -565,6 +657,7 @@ function formatTime(sec) {
   return `${m > 0 ? m + ':' : ''}${String(s).padStart(2, '0')}`;
 }
 
+// Skip timer button
 function skipRestTimer() {
   clearInterval(activeSession.timerInterval);
   const currentEx = activeSession.exercises[activeSession.currentExerciseIndex];
@@ -594,7 +687,7 @@ function playBeep() {
     gain.connect(ctx.destination);
     
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(880, ctx.currentTime); // A5 pitch
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
     gain.gain.setValueAtTime(0.1, ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
     
@@ -621,16 +714,13 @@ function saveCompletedSession() {
     return row;
   });
   
-  // Merge with logs database
   mergeLogs(newRows);
   
-  // Update Summary counts
   document.getElementById('summary-exercises-count').textContent = activeSession.exercises.length;
   let totalSets = 0;
   activeSession.exercises.forEach(ex => totalSets += ex.actualSets.length);
   document.getElementById('summary-sets-count').textContent = totalSets;
   
-  // Refresh views
   updateDashboard();
   updateProfileStats();
   
@@ -695,13 +785,11 @@ function renderLogsTable() {
     return;
   }
   
-  // Display latest logs first
   const displayLogs = [...logsData].reverse();
   
   displayLogs.forEach(row => {
     const tr = document.createElement('tr');
     
-    // Date & Exercise
     const dateTd = document.createElement('td');
     dateTd.textContent = row['Date'] || '';
     tr.appendChild(dateTd);
@@ -711,7 +799,6 @@ function renderLogsTable() {
     exTd.style.fontWeight = '600';
     tr.appendChild(exTd);
     
-    // Sets (Col 3-6)
     for (let s = 1; s <= 4; s++) {
       const td = document.createElement('td');
       const kg = row[`${s} (kg)`];
@@ -740,6 +827,7 @@ function calculateOneRepMax(weight, repsStr) {
   return weight * (1 + reps / 30);
 }
 
+// Chart rendering function with toggles and range filtering
 function drawChart() {
   const selectedEx = document.getElementById('exercise-chart-selector').value;
   const placeholder = document.getElementById('chart-placeholder-msg');
@@ -750,8 +838,13 @@ function drawChart() {
     chartInstance = null;
   }
   
-  if (!selectedEx || logsData.length === 0) {
-    if (placeholder) placeholder.style.display = 'block';
+  if (!selectedEx || logsData.length === 0 || (!showVolumeSeries && !showOneRmSeries)) {
+    if (placeholder) {
+      placeholder.style.display = 'block';
+      placeholder.innerHTML = !selectedEx 
+        ? '<p>Select an exercise to view charts.</p>' 
+        : '<p>Toggle at least one data series (Volume or 1RM) to view the graph.</p>';
+    }
     if (canvas) canvas.style.display = 'none';
     return;
   }
@@ -759,22 +852,54 @@ function drawChart() {
   if (placeholder) placeholder.style.display = 'none';
   if (canvas) canvas.style.display = 'block';
   
-  // Filter and parse logs for selected exercise
+  // Filter logs for selected exercise
   const exerciseLogs = logsData.filter(r => 
     r['Name of Exercise'] && r['Name of Exercise'].toLowerCase() === selectedEx.toLowerCase()
   );
   
   if (exerciseLogs.length === 0) {
-    if (placeholder) placeholder.style.display = 'block';
+    if (placeholder) {
+      placeholder.style.display = 'block';
+      placeholder.innerHTML = '<p>No data records found for this exercise.</p>';
+    }
     if (canvas) canvas.style.display = 'none';
     return;
   }
   
+  // Find latest entry date in exerciseLogs to filter relatively
+  let latestDate = new Date(0);
+  exerciseLogs.forEach(row => {
+    const d = parseDateStr(row['Date']);
+    if (d > latestDate) latestDate = d;
+  });
+  
+  // Apply Timeframe date range filter
+  let filteredLogs = exerciseLogs;
+  if (activeChartTimeframe !== 'all') {
+    const cutoffDays = activeChartTimeframe === '7d' ? 7 : 30;
+    const cutoffTime = latestDate.getTime() - (cutoffDays * 24 * 60 * 60 * 1000);
+    
+    filteredLogs = exerciseLogs.filter(row => {
+      const entryTime = parseDateStr(row['Date']).getTime();
+      return entryTime >= cutoffTime;
+    });
+  }
+
+  if (filteredLogs.length === 0) {
+    if (placeholder) {
+      placeholder.style.display = 'block';
+      placeholder.innerHTML = `<p>No data found within the selected ${activeChartTimeframe === '7d' ? '7 days' : '30 days'}.</p>`;
+    }
+    if (canvas) canvas.style.display = 'none';
+    return;
+  }
+  
+  // Parse labels and series values
   const labels = [];
   const oneRmValues = [];
   const volumeValues = [];
   
-  exerciseLogs.forEach(row => {
+  filteredLogs.forEach(row => {
     labels.push(row['Date']);
     
     let max1RM = 0;
@@ -808,40 +933,48 @@ function drawChart() {
   
   const ctx = canvas.getContext('2d');
   
-  const volumeGradient = ctx.createLinearGradient(0, 0, 0, 260);
-  volumeGradient.addColorStop(0, accentColor + '20');
-  volumeGradient.addColorStop(1, accentColor + '00');
+  // Build Chart Datasets dynamically
+  const datasets = [];
+  
+  if (showOneRmSeries) {
+    datasets.push({
+      label: 'Est. 1RM (kg)',
+      data: oneRmValues,
+      borderColor: accentColor,
+      borderWidth: 3,
+      pointBackgroundColor: accentColor,
+      pointBorderColor: '#ffffff',
+      pointHoverRadius: 6,
+      pointRadius: 4,
+      tension: 0.25,
+      yAxisID: 'y-1rm'
+    });
+  }
+  
+  if (showVolumeSeries) {
+    const volumeGradient = ctx.createLinearGradient(0, 0, 0, 250);
+    volumeGradient.addColorStop(0, accentColor + '20');
+    volumeGradient.addColorStop(1, accentColor + '00');
+    
+    datasets.push({
+      label: 'Total Volume (kg)',
+      data: volumeValues,
+      backgroundColor: volumeGradient,
+      borderColor: accentColor + '50',
+      borderWidth: 1.5,
+      pointBackgroundColor: accentColor + '70',
+      pointRadius: 2.5,
+      fill: true,
+      tension: 0.2,
+      yAxisID: 'y-vol'
+    });
+  }
   
   chartInstance = new Chart(ctx, {
     type: 'line',
     data: {
       labels: labels,
-      datasets: [
-        {
-          label: 'Est. 1RM (kg)',
-          data: oneRmValues,
-          borderColor: accentColor,
-          borderWidth: 3,
-          pointBackgroundColor: accentColor,
-          pointBorderColor: '#ffffff',
-          pointHoverRadius: 6,
-          pointRadius: 4,
-          tension: 0.25,
-          yAxisID: 'y-1rm'
-        },
-        {
-          label: 'Total Volume (kg)',
-          data: volumeValues,
-          backgroundColor: volumeGradient,
-          borderColor: accentColor + '50',
-          borderWidth: 1.5,
-          pointBackgroundColor: accentColor + '70',
-          pointRadius: 2.5,
-          fill: true,
-          tension: 0.2,
-          yAxisID: 'y-vol'
-        }
-      ]
+      datasets: datasets
     },
     options: {
       responsive: true,
@@ -875,7 +1008,7 @@ function drawChart() {
         },
         'y-1rm': {
           type: 'linear',
-          display: true,
+          display: showOneRmSeries,
           position: 'left',
           grid: { color: 'rgba(255, 255, 255, 0.03)' },
           ticks: { color: '#f5f6f8', font: { family: 'Outfit', size: 9 } },
@@ -888,7 +1021,7 @@ function drawChart() {
         },
         'y-vol': {
           type: 'linear',
-          display: true,
+          display: showVolumeSeries,
           position: 'right',
           grid: { drawOnChartArea: false },
           ticks: { color: '#8f94a6', font: { family: 'Outfit', size: 9 } },

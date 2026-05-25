@@ -261,48 +261,79 @@
         </div>
       </header>
 
+      <!-- Timeframe selector -->
+      <div class="analytics-filters" style="margin-bottom: 16px;">
+        <div class="timeframe-selector">
+          <button class="timeframe-btn active" data-timeframe="all">All Time</button>
+          <button class="timeframe-btn" data-timeframe="30d">30 Days</button>
+          <button class="timeframe-btn" data-timeframe="7d">7 Days</button>
+        </div>
+      </div>
+
       <!-- Chart Card -->
-      <section class="card visuals-card" style="margin-bottom: 24px;">
-        <div class="chart-header">
-          <div class="card-title" style="margin-bottom: 0;">Progress Lines</div>
-          <select id="exercise-chart-selector">
+      <section class="card visuals-card" style="margin-bottom: 20px;">
+        <div class="chart-header" style="margin-bottom: 12px;">
+          <select id="exercise-chart-selector" style="flex: 1;">
             <option value="">Select Exercise</option>
           </select>
+        </div>
+
+        <!-- Series Toggles -->
+        <div class="series-controls" style="margin-bottom: 16px; display: flex; gap: 8px; justify-content: space-between;">
+          <button class="series-toggle-btn active" id="toggle-vol-btn" style="flex: 1;">
+            Total Amount Lifted
+          </button>
+          <div style="flex: 1; display: flex; gap: 6px; align-items: center;">
+            <button class="series-toggle-btn active" id="toggle-1rm-btn" style="flex: 1;">
+              One Rep Max
+            </button>
+            <button class="info-btn" id="one-rm-info-btn" title="How 1RM is calculated">i</button>
+          </div>
         </div>
         
         <div class="chart-container">
           <canvas id="progressChart"></canvas>
-          <div id="chart-placeholder-msg" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: var(--text-secondary);">
+          <div id="chart-placeholder-msg" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: var(--text-secondary); width: 80%;">
             <p>Select an exercise to view charts.</p>
           </div>
         </div>
       </section>
 
-      <!-- History Table Card -->
-      <section class="card table-card">
-        <div class="card-title">Workout Logs</div>
-        <div class="table-wrapper">
-          <table id="log-table">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Exercise Name</th>
-                <th>Set 1</th>
-                <th>Set 2</th>
-                <th>Set 3</th>
-                <th>Set 4</th>
-              </tr>
-            </thead>
-            <tbody id="log-table-body">
-              <tr>
-                <td colspan="6" style="text-align: center; color: var(--text-secondary); padding: 40px 0;">
-                  No workout logs found.
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
+      <!-- Collapsible History Trigger Button -->
+      <button class="btn btn-secondary" id="toggle-history-btn" style="width: 100%; margin-bottom: 24px; padding: 14px; display: flex; justify-content: center; font-size: 1rem; border-radius: 12px;">
+        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" style="margin-right: 8px;">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        History
+      </button>
+
+      <!-- Collapsible Log Table Card -->
+      <div id="history-collapse-container" class="collapse-container">
+        <section class="card table-card" style="margin-bottom: 24px;">
+          <div class="card-title">Workout Logs</div>
+          <div class="table-wrapper">
+            <table id="log-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Exercise Name</th>
+                  <th>Set 1</th>
+                  <th>Set 2</th>
+                  <th>Set 3</th>
+                  <th>Set 4</th>
+                </tr>
+              </thead>
+              <tbody id="log-table-body">
+                <tr>
+                  <td colspan="6" style="text-align: center; color: var(--text-secondary); padding: 40px 0;">
+                    No workout logs found.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
     </div>
 
   </div>
@@ -332,6 +363,28 @@
       <span>Analytics</span>
     </button>
   </nav>
+
+  <!-- INFO POPUP MODAL (1RM explanation) -->
+  <div id="info-modal" class="modal-overlay">
+    <div class="modal-content card">
+      <h3 class="card-title">One Rep Max (1RM)</h3>
+      <p style="margin-bottom: 12px; font-size: 0.95rem; line-height: 1.4;">
+        Your 1-Rep Max is the maximum amount of weight you could theoretically lift for a single, full repetition of an exercise.
+      </p>
+      <p style="margin-bottom: 12px; font-size: 0.95rem; line-height: 1.4;">
+        Testing your actual 1RM can be dangerous. Instead, PROGRESO calculates an <strong>estimate</strong> using the standard <strong>Epley Formula</strong>:
+      </p>
+      <div class="formula-box">
+        1RM &approx; Weight &times; (1 + Reps / 30)
+      </div>
+      <p style="color: var(--text-secondary); font-size: 0.82rem; line-height: 1.4; margin-top: 16px;">
+        * Note: This is an approximate mathematical calculation. Its accuracy depends on your repetition ranges (best calculated for sets of 10 reps or fewer).
+      </p>
+      <button class="btn btn-primary" id="close-modal-btn" style="margin-top: 24px; width: 100%; border-radius: 12px; padding: 14px;">
+        Close Explanation
+      </button>
+    </div>
+  </div>
 
   <!-- Audio elements for rest timer complete beep -->
   <audio id="beep-sound" src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==\"></audio>
