@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <radialGradient id="bg-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#bd00ff" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#0b0c10" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="neon-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#bd00ff"/>
+      <stop offset="100%" stop-color="#00d2ff"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="12" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="512" height="512" fill="#0b0c10"/>
+  <circle cx="256" cy="256" r="256" fill="url(#bg-glow)"/>
+  
+  <!-- Dumbbell & F Icon -->
+  <g transform="translate(256, 256) rotate(-45) translate(-256, -256)" filter="url(#glow)">
+    <!-- Shaft -->
+    <rect x="236" y="128" width="40" height="256" rx="20" fill="url(#neon-grad)" />
+    
+    <!-- Left Weights -->
+    <rect x="186" y="96" width="140" height="40" rx="10" fill="#ffffff" />
+    <rect x="166" y="66" width="180" height="30" rx="8" fill="url(#neon-grad)" />
+    
+    <!-- Right Weights -->
+    <rect x="186" y="376" width="140" height="40" rx="10" fill="#ffffff" />
+    <rect x="166" y="416" width="180" height="30" rx="8" fill="url(#neon-grad)" />
+  </g>
+  
+  <!-- Glowing Letter F -->
+  <text x="256" y="290" font-family="'Outfit', sans-serif" font-size="120" font-weight="900" fill="#ffffff" text-anchor="middle" filter="url(#glow)">F</text>
+</svg>

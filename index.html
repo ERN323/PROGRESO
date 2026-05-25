@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FlexTrack // Premium Workout Tracker & Visualizer</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <meta name="theme-color" content="#bd00ff">
+  <!-- Chart.js for beautiful progress charts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- SheetJS for CSV/XLSX reading & writing -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+          .then((reg) => console.log('Service Worker registered:', reg.scope))
+          .catch((err) => console.error('Service Worker registration failed:', err));
+      });
+    }
+  </script>
+</head>
+<body class="theme-purple">
+
+  <div class="container">
+    
+    <!-- Top Header -->
+    <header>
+      <div class="logo-section">
+        <h1>FLEXTRACK</h1>
+        <p>Aesthetic Strength Analytics</p>
+      </div>
+      
+      <!-- Theme Selection picker -->
+      <div class="theme-selector">
+        <span>Neon Accent</span>
+        <div class="theme-dots">
+          <div class="theme-dot dot-purple active" data-theme="purple" title="Purple Neon"></div>
+          <div class="theme-dot dot-blue" data-theme="blue" title="Blue Neon"></div>
+          <div class="theme-dot dot-green" data-theme="green" title="Green Neon"></div>
+          <div class="theme-dot dot-yellow" data-theme="yellow" title="Yellow Neon"></div>
+          <div class="theme-dot dot-orange" data-theme="orange" title="Orange Neon"></div>
+          <div class="theme-dot dot-red" data-theme="red" title="Red Neon"></div>
+          <div class="theme-dot dot-white" data-theme="white" title="White Neon"></div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Import/Export Actions -->
+    <div class="storage-actions">
+      <div class="file-input-wrapper">
+        <button class="btn btn-secondary">
+          <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+          </svg>
+          Import Spreadsheet
+        </button>
+        <input type="file" id="spreadsheet-upload" accept=".csv,.xlsx,.xls">
+      </div>
+      
+      <button class="btn btn-secondary" id="export-btn">
+        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+        </svg>
+        Export CSV
+      </button>
+    </div>
+
+    <!-- Main Dashboard Body -->
+    <div class="dashboard-grid">
+      
+      <!-- Session Flow Tracker (State Machine Panel) -->
+      <section class="card session-card">
+        
+        <!-- STATE 1: WELCOME SCREEN -->
+        <div id="screen-welcome" class="state-screen active">
+          <div class="welcome-display">
+            <div class="date-badge" id="welcome-date">25.05.2026</div>
+            <h2>Ready to train?</h2>
+            <p>Track your exercises, log your reps, and sync the data straight to your spreadsheet.</p>
+            <button class="btn btn-primary" id="start-session-btn" style="padding: 16px 36px; font-size: 1.1rem; border-radius: 30px;">
+              Start Session
+            </button>
+          </div>
+        </div>
+
+        <!-- STATE 2: EXERCISE PLANNER -->
+        <div id="screen-plan-exercises" class="state-screen">
+          <h3 class="card-title">Plan Exercises</h3>
+          <p style="color: var(--text-secondary); margin-bottom: 20px; font-size: 0.9rem;">
+            What exercises are you planning to do today? Add them to your list.
+          </p>
+          
+          <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+            <div style="flex: 2;">
+              <input type="text" id="plan-ex-name" placeholder="Exercise name (e.g. Squats)" list="ex-autocomplete">
+              <datalist id="ex-autocomplete"></datalist>
+            </div>
+            <div style="flex: 1;">
+              <input type="number" id="plan-ex-sets" placeholder="Sets" min="1" max="10" value="4">
+            </div>
+            <button class="btn btn-primary btn-icon" id="plan-add-btn" title="Add Exercise">
+              <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+              </svg>
+            </button>
+          </div>
+
+          <!-- Planned List -->
+          <div id="planned-list" style="margin-bottom: 30px; max-height: 220px; overflow-y: auto;">
+            <!-- Dynamic elements added here -->
+            <p id="empty-plan-msg" style="text-align: center; color: var(--text-secondary); padding: 20px;">No exercises added yet.</p>
+          </div>
+
+          <div style="display: flex; justify-content: space-between;">
+            <button class="btn btn-secondary" id="cancel-plan-btn">Cancel</button>
+            <button class="btn btn-primary" id="confirm-plan-btn" disabled>Next</button>
+          </div>
+        </div>
+
+        <!-- STATE 3: REST PLANNER -->
+        <div id="screen-plan-rest" class="state-screen">
+          <h3 class="card-title">Rest Duration</h3>
+          <p style="color: var(--text-secondary); margin-bottom: 25px; font-size: 0.9rem;">
+            Enter the planned rest duration between sets in seconds.
+          </p>
+
+          <div class="form-group" style="max-width: 200px; margin: 0 auto 30px auto; text-align: center;">
+            <label for="planned-rest-seconds">Rest (Seconds)</label>
+            <input type="number" id="planned-rest-seconds" value="60" min="5" max="600" style="text-align: center; font-size: 1.5rem; font-weight: 700; padding: 12px;">
+          </div>
+
+          <div style="display: flex; justify-content: space-between;">
+            <button class="btn btn-secondary" id="back-to-plan-btn">Back</button>
+            <button class="btn btn-primary" id="start-workout-btn">Start Exercise</button>
+          </div>
+        </div>
+
+        <!-- STATE 4: ACTIVE TRACKING (WAITING FOR REPS) -->
+        <div id="screen-track-wait-reps" class="state-screen">
+          <div class="active-exercise-display">
+            <div class="ex-name" id="active-ex-name">Squats</div>
+            <div class="set-count" id="active-set-count">Set 1 of 4</div>
+          </div>
+
+          <div class="input-prompt-label">Insert set numbers:</div>
+
+          <div class="reps-input-row">
+            <div class="form-group">
+              <label for="set-weight-input">Weight (kg)</label>
+              <input type="number" id="set-weight-input" placeholder="kg" min="0" step="0.5">
+            </div>
+            <div class="form-group">
+              <label for="set-reps-input">Reps Done</label>
+              <input type="text" id="set-reps-input" placeholder="reps" autofocus>
+            </div>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; margin-top: 30px;">
+            <button class="btn btn-danger" id="quit-workout-btn">Quit</button>
+            <button class="btn btn-primary" id="log-set-btn" style="padding-left: 32px; padding-right: 32px;">Log Set</button>
+          </div>
+        </div>
+
+        <!-- STATE 5: ACTIVE TRACKING (REST TIMER COUNTDOWN) -->
+        <div id="screen-track-timer" class="state-screen">
+          <div class="active-exercise-display">
+            <div class="ex-name" id="timer-ex-name">Squats</div>
+            <div class="set-count" id="timer-next-set">Up Next: Set 2 of 4</div>
+          </div>
+
+          <div class="timer-container">
+            <div class="timer-circle">
+              <svg>
+                <circle class="bg-ring" cx="90" cy="90" r="80"></circle>
+                <circle class="progress-ring" id="timer-progress-ring" cx="90" cy="90" r="80"></circle>
+              </svg>
+              <div class="timer-text" id="timer-countdown">00</div>
+            </div>
+          </div>
+
+          <div style="display: flex; justify-content: center; gap: 16px;">
+            <button class="btn btn-secondary" id="skip-timer-btn" style="padding: 12px 36px; border-radius: 20px;">
+              Skip Rest
+            </button>
+          </div>
+        </div>
+
+        <!-- STATE 6: WORKOUT SUMMARY -->
+        <div id="screen-summary" class="state-screen">
+          <div class="summary-display">
+            <div class="summary-icon">
+              <svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+            </div>
+            <h2>Workout Completed!</h2>
+            <p style="margin-bottom: 20px;">Awesome job! Your exercises and sets have been successfully saved into your local history.</p>
+            
+            <div style="background: rgba(255, 255, 255, 0.02); padding: 16px; border-radius: 12px; border: 1px solid var(--card-border); text-align: left; margin-bottom: 30px;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <span style="color: var(--text-secondary);">Completed Exercises:</span>
+                <span id="summary-exercises-count" style="font-weight: 600;">0</span>
+              </div>
+              <div style="display: flex; justify-content: space-between;">
+                <span style="color: var(--text-secondary);">Total Working Sets:</span>
+                <span id="summary-sets-count" style="font-weight: 600;">0</span>
+              </div>
+            </div>
+
+            <button class="btn btn-primary" id="finish-workout-btn" style="padding: 14px 44px; border-radius: 25px;">
+              Finish Workout
+            </button>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- Visualization and Analytics Card -->
+      <section class="card visuals-card">
+        <div class="chart-header">
+          <div class="card-title" style="margin-bottom: 0;">Progress Analytics</div>
+          <select id="exercise-chart-selector">
+            <option value="">Select Exercise</option>
+          </select>
+        </div>
+        
+        <div class="chart-container">
+          <canvas id="progressChart"></canvas>
+          <div id="chart-placeholder-msg" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: var(--text-secondary);">
+            <p>Upload a spreadsheet or log a workout to see data visualizations.</p>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- History / Log Table Card -->
+    <section class="card table-card">
+      <div class="card-title">Workout History</div>
+      <div class="table-wrapper">
+        <table id="log-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Exercise Name</th>
+              <th>Set 1 (kg x reps)</th>
+              <th>Set 2 (kg x reps)</th>
+              <th>Set 3 (kg x reps)</th>
+              <th>Set 4 (kg x reps)</th>
+            </tr>
+          </thead>
+          <tbody id="log-table-body">
+            <tr>
+              <td colspan="6" style="text-align: center; color: var(--text-secondary); padding: 40px 0;">
+                No workout logs loaded. Use the "Import Spreadsheet" button above to upload your history.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Audio elements for rest timer complete beep -->
+  <audio id="beep-sound" src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==\"></audio>
+  
+  <script src="app.js"></script>
+</body>
+</html>
