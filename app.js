@@ -490,6 +490,25 @@ function setupEventListeners() {
 
   // Chart dropdown filter
   document.getElementById('exercise-chart-selector').addEventListener('change', drawChart);
+
+  // Custom Select Dropdown Toggle
+  const selectTrigger = document.getElementById('exercise-select-trigger');
+  const selectOptions = document.getElementById('exercise-select-options');
+  if (selectTrigger && selectOptions) {
+    selectTrigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = selectOptions.classList.toggle('open');
+      selectTrigger.classList.toggle('open', isOpen);
+    });
+  }
+
+  // Close dropdown on click outside
+  document.addEventListener('click', () => {
+    if (selectTrigger && selectOptions) {
+      selectOptions.classList.remove('open');
+      selectTrigger.classList.remove('open');
+    }
+  });
 }
 
 // Planner Screens Implementation
@@ -755,6 +774,57 @@ function populateExerciseSelect() {
   } else if (exercises.length > 0) {
     select.value = exercises[0];
   }
+
+  // Populate and render custom select
+  renderCustomSelect();
+}
+
+function renderCustomSelect() {
+  const trigger = document.getElementById('exercise-select-trigger');
+  const optionsContainer = document.getElementById('exercise-select-options');
+  const customText = document.getElementById('custom-select-text');
+  const nativeSelect = document.getElementById('exercise-chart-selector');
+  
+  if (!trigger || !optionsContainer || !customText || !nativeSelect) return;
+  
+  // Set initial text
+  const currentVal = nativeSelect.value;
+  const matchedOpt = nativeSelect.querySelector(`option[value="${currentVal}"]`);
+  customText.textContent = matchedOpt ? matchedOpt.textContent : 'Select Exercise';
+  
+  // Clear custom options
+  optionsContainer.innerHTML = '';
+  
+  const nativeOptions = nativeSelect.querySelectorAll('option');
+  nativeOptions.forEach(opt => {
+    if (opt.value === '') return; // Skip placeholder option
+    
+    const div = document.createElement('div');
+    div.className = 'custom-option';
+    if (opt.value === currentVal) {
+      div.classList.add('selected');
+    }
+    div.textContent = opt.textContent;
+    div.dataset.value = opt.value;
+    
+    div.addEventListener('click', () => {
+      // Update native select
+      nativeSelect.value = opt.value;
+      nativeSelect.dispatchEvent(new Event('change'));
+      
+      // Update label and styles
+      customText.textContent = opt.textContent;
+      document.querySelectorAll('.custom-option').forEach(item => {
+        item.classList.toggle('selected', item.dataset.value === opt.value);
+      });
+      
+      // Close dropdown
+      optionsContainer.classList.remove('open');
+      trigger.classList.remove('open');
+    });
+    
+    optionsContainer.appendChild(div);
+  });
 }
 
 function populateExerciseAutocomplete() {

@@ -273,9 +273,20 @@
       <!-- Chart Card -->
       <section class="card visuals-card" style="margin-bottom: 20px;">
         <div class="chart-header" style="margin-bottom: 12px;">
-          <select id="exercise-chart-selector" style="flex: 1;">
+          <!-- Hidden native select for compatibility -->
+          <select id="exercise-chart-selector" style="display: none;">
             <option value="">Select Exercise</option>
           </select>
+          <!-- Custom styled dropdown -->
+          <div class="custom-select-wrapper" id="exercise-select-wrapper">
+            <div class="custom-select-trigger" id="exercise-select-trigger">
+              <span id="custom-select-text">Select Exercise</span>
+              <div class="arrow"></div>
+            </div>
+            <div class="custom-options" id="exercise-select-options">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
         </div>
 
         <!-- Series Toggles -->
