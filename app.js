@@ -59,7 +59,7 @@ function getTodayDateString() {
 
 // Accent Color Theme Handler
 function loadTheme() {
-  const savedTheme = localStorage.getItem('flextrack-theme');
+  const savedTheme = localStorage.getItem('progreso-theme');
   if (savedTheme) {
     currentTheme = savedTheme;
     document.body.className = `theme-${savedTheme}`;
@@ -74,7 +74,7 @@ function loadTheme() {
 function selectTheme(themeName) {
   currentTheme = themeName;
   document.body.className = `theme-${themeName}`;
-  localStorage.setItem('flextrack-theme', themeName);
+  localStorage.setItem('progreso-theme', themeName);
   
   document.querySelectorAll('.theme-dot').forEach(dot => {
     dot.classList.toggle('active', dot.dataset.theme === themeName);
@@ -88,7 +88,7 @@ function selectTheme(themeName) {
 
 // Persistent Storage Handlers
 function loadLogsFromStorage() {
-  const stored = localStorage.getItem('flextrack-logs');
+  const stored = localStorage.getItem('progreso-logs');
   if (stored) {
     try {
       logsData = JSON.parse(stored);
@@ -150,7 +150,7 @@ function loadLogsFromStorage() {
 }
 
 function saveLogsToStorage() {
-  localStorage.setItem('flextrack-logs', JSON.stringify(logsData));
+  localStorage.setItem('progreso-logs', JSON.stringify(logsData));
 }
 
 // Data Normalization (standardizes sheet parsing output)
@@ -923,7 +923,7 @@ function exportCSV() {
   
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
-  link.setAttribute('download', `flextrack_workout_logs.csv`);
+  link.setAttribute('download', `progreso_workout_logs.csv`);
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);

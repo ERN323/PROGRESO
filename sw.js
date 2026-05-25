@@ -1,4 +1,4 @@
-const CACHE_NAME = 'flextrack-cache-v1';
+const CACHE_NAME = 'progreso-cache-v1';
 const ASSETS = [
   './',
   './index.html',

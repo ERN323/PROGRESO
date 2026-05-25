@@ -1,6 +1,6 @@
 {
-  "name": "FlexTrack Workout Tracker",
-  "short_name": "FlexTrack",
+  "name": "PROGRESO Workout Tracker",
+  "short_name": "PROGRESO",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0b0c10",
