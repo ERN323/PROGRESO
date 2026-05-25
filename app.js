@@ -24,6 +24,8 @@ let customPresets = [];
 let presetBuilderExercises = []; // Temp list of { name, plannedSets } in builder modal
 let activeEditingPresetIndex = null; // null if creating, number if editing
 let activeCatalogueCategory = 'Legs';
+let activeChartMode = 'exercise'; // 'exercise' or 'muscle'
+let activePresetBuilderCategory = 'Legs';
 
 const DEFAULT_CATALOGUE = {
   Legs: [
@@ -199,6 +201,7 @@ function switchTab(tabName) {
   if (tabName === 'analytics') {
     // Redraw chart with slight delay to ensure container height calculation is correct
     setTimeout(() => {
+      renderMuscleBreakdown();
       drawChart();
     }, 50);
   } else if (tabName === 'profile') {
@@ -425,6 +428,7 @@ function setupEventListeners() {
       document.querySelectorAll('.timeframe-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       activeChartTimeframe = btn.dataset.timeframe;
+      renderMuscleBreakdown();
       drawChart();
     });
   });
@@ -672,6 +676,30 @@ function setupEventListeners() {
 
   // Chart dropdown filter
   document.getElementById('exercise-chart-selector').addEventListener('change', drawChart);
+  const nativeMuscleSelect = document.getElementById('muscle-group-chart-selector');
+  if (nativeMuscleSelect) {
+    nativeMuscleSelect.addEventListener('change', drawChart);
+  }
+
+  // Chart Mode Toggles
+  document.querySelectorAll('#chart-mode-selector .chart-mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#chart-mode-selector .chart-mode-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeChartMode = btn.dataset.mode;
+      
+      const exWrapper = document.getElementById('exercise-select-wrapper');
+      const muscleWrapper = document.getElementById('muscle-group-select-wrapper');
+      if (activeChartMode === 'exercise') {
+        if (exWrapper) exWrapper.style.display = 'block';
+        if (muscleWrapper) muscleWrapper.style.display = 'none';
+      } else {
+        if (exWrapper) exWrapper.style.display = 'none';
+        if (muscleWrapper) muscleWrapper.style.display = 'block';
+      }
+      drawChart();
+    });
+  });
 
   // Custom Select Dropdown Toggle
   const selectTrigger = document.getElementById('exercise-select-trigger');
@@ -684,11 +712,58 @@ function setupEventListeners() {
     });
   }
 
-  // Close dropdown on click outside
+  // Muscle Group Dropdown Toggle
+  const muscleTrigger = document.getElementById('muscle-group-select-trigger');
+  const muscleOptions = document.getElementById('muscle-group-select-options');
+  if (muscleTrigger && muscleOptions) {
+    muscleTrigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = muscleOptions.classList.toggle('open');
+      muscleTrigger.classList.toggle('open', isOpen);
+    });
+  }
+  
+  // Muscle Group Select Options
+  document.querySelectorAll('#muscle-group-select-options .custom-option').forEach(opt => {
+    opt.addEventListener('click', () => {
+      if (nativeMuscleSelect) {
+        nativeMuscleSelect.value = opt.dataset.value;
+        nativeMuscleSelect.dispatchEvent(new Event('change'));
+      }
+      
+      const textSpan = document.getElementById('muscle-group-select-text');
+      if (textSpan) textSpan.textContent = opt.textContent;
+      
+      document.querySelectorAll('#muscle-group-select-options .custom-option').forEach(item => {
+        item.classList.toggle('selected', item.dataset.value === opt.dataset.value);
+      });
+      
+      if (muscleOptions && muscleTrigger) {
+        muscleOptions.classList.remove('open');
+        muscleTrigger.classList.remove('open');
+      }
+    });
+  });
+
+  // Preset Builder Categories Pills in Modal
+  document.querySelectorAll('.preset-catalogue-categories .cat-pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+      document.querySelectorAll('.preset-catalogue-categories .cat-pill').forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+      activePresetBuilderCategory = pill.dataset.pcat;
+      renderPresetBuilderCatalogue();
+    });
+  });
+
+  // Close dropdowns on click outside
   document.addEventListener('click', () => {
     if (selectTrigger && selectOptions) {
       selectOptions.classList.remove('open');
       selectTrigger.classList.remove('open');
+    }
+    if (muscleTrigger && muscleOptions) {
+      muscleOptions.classList.remove('open');
+      muscleTrigger.classList.remove('open');
     }
   });
 }
@@ -935,6 +1010,7 @@ function updateDashboard() {
   populateExerciseAutocomplete();
   renderPresets();
   renderCatalogue();
+  renderMuscleBreakdown();
   drawChart();
 }
 
@@ -1086,7 +1162,6 @@ function calculateOneRepMax(weight, repsStr) {
 
 // Chart rendering function with toggles and range filtering
 function drawChart() {
-  const selectedEx = document.getElementById('exercise-chart-selector').value;
   const placeholder = document.getElementById('chart-placeholder-msg');
   const canvas = document.getElementById('progressChart');
   
@@ -1095,108 +1170,306 @@ function drawChart() {
     chartInstance = null;
   }
   
-  if (!selectedEx || logsData.length === 0 || (!showVolumeSeries && !showOneRmSeries)) {
+  if (logsData.length === 0) {
     if (placeholder) {
       placeholder.style.display = 'block';
-      placeholder.innerHTML = !selectedEx 
-        ? '<p>Select an exercise to view charts.</p>' 
-        : '<p>Toggle at least one data series (Volume or 1RM) to view the graph.</p>';
+      placeholder.innerHTML = '<p>No data records found. Log some workouts first!</p>';
     }
     if (canvas) canvas.style.display = 'none';
     return;
   }
   
-  if (placeholder) placeholder.style.display = 'none';
-  if (canvas) canvas.style.display = 'block';
-  
-  // Filter logs for selected exercise
-  const exerciseLogs = logsData.filter(r => 
-    r['Name of Exercise'] && r['Name of Exercise'].toLowerCase() === selectedEx.toLowerCase()
-  );
-  
-  if (exerciseLogs.length === 0) {
-    if (placeholder) {
-      placeholder.style.display = 'block';
-      placeholder.innerHTML = '<p>No data records found for this exercise.</p>';
-    }
-    if (canvas) canvas.style.display = 'none';
-    return;
-  }
-  
-  // Find latest entry date in exerciseLogs to filter relatively
-  let latestDate = new Date(0);
-  exerciseLogs.forEach(row => {
-    const d = parseDateStr(row['Date']);
-    if (d > latestDate) latestDate = d;
-  });
-  
-  // Apply Timeframe date range filter
-  let filteredLogs = exerciseLogs;
-  if (activeChartTimeframe !== 'all') {
-    const cutoffDays = activeChartTimeframe === '7d' ? 7 : 30;
-    const cutoffTime = latestDate.getTime() - (cutoffDays * 24 * 60 * 60 * 1000);
-    
-    filteredLogs = exerciseLogs.filter(row => {
-      const entryTime = parseDateStr(row['Date']).getTime();
-      return entryTime >= cutoffTime;
-    });
-  }
-
-  if (filteredLogs.length === 0) {
-    if (placeholder) {
-      placeholder.style.display = 'block';
-      placeholder.innerHTML = `<p>No data found within the selected ${activeChartTimeframe === '7d' ? '7 days' : '30 days'}.</p>`;
-    }
-    if (canvas) canvas.style.display = 'none';
-    return;
-  }
-  
-  // Parse labels and series values
-  const labels = [];
-  const oneRmValues = [];
-  const volumeValues = [];
-  
-  filteredLogs.forEach(row => {
-    labels.push(row['Date']);
-    
-    let max1RM = 0;
-    let totalVolume = 0;
-    
-    let setIndex = 1;
-    while (true) {
-      const kgKey = `${setIndex} (kg)`;
-      const repsKey = `${setIndex} (reps)`;
-      
-      if (row[kgKey] === undefined && row[repsKey] === undefined && setIndex > 4) break;
-      
-      const kgVal = parseFloat(row[kgKey]) || 0;
-      const repsVal = row[repsKey] || '';
-      const repsInt = parseInt(String(repsVal).match(/\d+/)) || 0;
-      
-      if (repsInt > 0) {
-        const set1RM = calculateOneRepMax(kgVal, repsVal);
-        if (set1RM > max1RM) max1RM = set1RM;
-        totalVolume += kgVal * repsInt;
+  if (activeChartMode === 'exercise') {
+    const selectedEx = document.getElementById('exercise-chart-selector').value;
+    if (!selectedEx || (!showVolumeSeries && !showOneRmSeries)) {
+      if (placeholder) {
+        placeholder.style.display = 'block';
+        placeholder.innerHTML = !selectedEx 
+          ? '<p>Select an exercise to view charts.</p>' 
+          : '<p>Toggle at least one data series (Volume or 1RM) to view the graph.</p>';
       }
-      setIndex++;
+      if (canvas) canvas.style.display = 'none';
+      return;
     }
     
-    oneRmValues.push(Math.round(max1RM * 10) / 10);
-    volumeValues.push(totalVolume);
-  });
+    if (placeholder) placeholder.style.display = 'none';
+    if (canvas) canvas.style.display = 'block';
+    
+    // Filter logs for selected exercise
+    const exerciseLogs = logsData.filter(r => 
+      r['Name of Exercise'] && r['Name of Exercise'].toLowerCase() === selectedEx.toLowerCase()
+    );
+    
+    if (exerciseLogs.length === 0) {
+      if (placeholder) {
+        placeholder.style.display = 'block';
+        placeholder.innerHTML = '<p>No data records found for this exercise.</p>';
+      }
+      if (canvas) canvas.style.display = 'none';
+      return;
+    }
+    
+    // Find latest entry date in exerciseLogs to filter relatively
+    let latestDate = new Date(0);
+    exerciseLogs.forEach(row => {
+      const d = parseDateStr(row['Date']);
+      if (d > latestDate) latestDate = d;
+    });
+    
+    // Apply Timeframe date range filter
+    let filteredLogs = exerciseLogs;
+    if (activeChartTimeframe !== 'all') {
+      const cutoffDays = activeChartTimeframe === '7d' ? 7 : 30;
+      const cutoffTime = latestDate.getTime() - (cutoffDays * 24 * 60 * 60 * 1000);
+      
+      filteredLogs = exerciseLogs.filter(row => {
+        const entryTime = parseDateStr(row['Date']).getTime();
+        return entryTime >= cutoffTime;
+      });
+    }
 
-  const bodyStyles = getComputedStyle(document.body);
-  const accentColor = bodyStyles.getPropertyValue('--accent-color').trim() || '#bd00ff';
-  
-  const ctx = canvas.getContext('2d');
-  
-  // Build Chart Datasets dynamically
-  const datasets = [];
-  
-  if (showOneRmSeries) {
+    if (filteredLogs.length === 0) {
+      if (placeholder) {
+        placeholder.style.display = 'block';
+        placeholder.innerHTML = `<p>No data found within the selected ${activeChartTimeframe === '7d' ? '7 days' : '30 days'}.</p>`;
+      }
+      if (canvas) canvas.style.display = 'none';
+      return;
+    }
+    
+    // Parse labels and series values
+    const labels = [];
+    const oneRmValues = [];
+    const volumeValues = [];
+    
+    filteredLogs.forEach(row => {
+      labels.push(row['Date']);
+      
+      let max1RM = 0;
+      let totalVolume = 0;
+      
+      let setIndex = 1;
+      while (true) {
+        const kgKey = `${setIndex} (kg)`;
+        const repsKey = `${setIndex} (reps)`;
+        
+        if (row[kgKey] === undefined && row[repsKey] === undefined && setIndex > 4) break;
+        
+        const kgVal = parseFloat(row[kgKey]) || 0;
+        const repsVal = row[repsKey] || '';
+        const repsInt = parseInt(String(repsVal).match(/\d+/)) || 0;
+        
+        if (repsInt > 0) {
+          const set1RM = calculateOneRepMax(kgVal, repsVal);
+          if (set1RM > max1RM) max1RM = set1RM;
+          totalVolume += kgVal * repsInt;
+        }
+        setIndex++;
+      }
+      
+      oneRmValues.push(Math.round(max1RM * 10) / 10);
+      volumeValues.push(totalVolume);
+    });
+
+    const bodyStyles = getComputedStyle(document.body);
+    const accentColor = bodyStyles.getPropertyValue('--accent-color').trim() || '#bd00ff';
+    
+    const ctx = canvas.getContext('2d');
+    const datasets = [];
+    
+    if (showOneRmSeries) {
+      datasets.push({
+        label: 'Est. 1RM (kg)',
+        data: oneRmValues,
+        borderColor: accentColor,
+        borderWidth: 3,
+        pointBackgroundColor: accentColor,
+        pointBorderColor: '#ffffff',
+        pointHoverRadius: 6,
+        pointRadius: 4,
+        tension: 0.25,
+        yAxisID: 'y-vol'
+      });
+    }
+    
+    if (showVolumeSeries) {
+      const volumeGradient = ctx.createLinearGradient(0, 0, 0, 250);
+      volumeGradient.addColorStop(0, accentColor + '20');
+      volumeGradient.addColorStop(1, accentColor + '00');
+      
+      datasets.push({
+        label: 'Total Volume (kg)',
+        data: volumeValues,
+        backgroundColor: volumeGradient,
+        borderColor: accentColor + '50',
+        borderWidth: 1.5,
+        pointBackgroundColor: accentColor + '70',
+        pointRadius: 2.5,
+        fill: true,
+        tension: 0.2,
+        yAxisID: 'y-vol2'
+      });
+    }
+    
+    chartInstance = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: datasets
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+          mode: 'index',
+          intersect: false
+        },
+        plugins: {
+          legend: {
+            display: true,
+            position: 'top',
+            labels: {
+              color: '#f5f6f8',
+              font: { family: 'Outfit', size: 10 }
+            }
+          },
+          tooltip: {
+            backgroundColor: 'rgba(25, 27, 38, 0.95)',
+            titleFont: { family: 'Outfit', size: 11, weight: 'bold' },
+            bodyFont: { family: 'Outfit', size: 11 },
+            borderColor: accentColor + '30',
+            borderWidth: 1,
+            cornerRadius: 8
+          }
+        },
+        scales: {
+          x: {
+            grid: { color: 'rgba(255, 255, 255, 0.03)' },
+            ticks: { color: '#8f94a6', font: { family: 'Outfit', size: 9 } }
+          },
+          'y-vol': {
+            type: 'linear',
+            display: showOneRmSeries,
+            position: 'left',
+            grid: { color: 'rgba(255, 255, 255, 0.03)' },
+            ticks: { color: '#f5f6f8', font: { family: 'Outfit', size: 9 } },
+            title: {
+              display: true,
+              text: '1RM (kg)',
+              color: '#f5f6f8',
+              font: { family: 'Outfit', size: 10, weight: 'bold' }
+            }
+          },
+          'y-vol2': {
+            type: 'linear',
+            display: showVolumeSeries,
+            position: 'right',
+            grid: { drawOnChartArea: false },
+            ticks: { color: '#8f94a6', font: { family: 'Outfit', size: 9 } },
+            title: {
+              display: true,
+              text: 'Volume (kg)',
+              color: '#8f94a6',
+              font: { family: 'Outfit', size: 10, weight: 'bold' }
+            }
+          }
+        }
+      }
+    });
+
+  } else {
+    // Muscle group aggregate progress charts
+    const selectedMuscle = document.getElementById('muscle-group-chart-selector').value;
+    if (placeholder) placeholder.style.display = 'none';
+    if (canvas) canvas.style.display = 'block';
+    
+    // Group records by Date
+    const dateMap = new Map();
+    
+    logsData.forEach(row => {
+      if (!row['Name of Exercise'] || !row['Date']) return;
+      const cat = getExerciseCategory(row['Name of Exercise']);
+      if (cat.toLowerCase() !== selectedMuscle.toLowerCase()) return;
+      
+      const date = row['Date'];
+      if (!dateMap.has(date)) {
+        dateMap.set(date, { totalVolume: 0, totalSets: 0 });
+      }
+      
+      const dateData = dateMap.get(date);
+      let setIndex = 1;
+      while (true) {
+        const kgKey = `${setIndex} (kg)`;
+        const repsKey = `${setIndex} (reps)`;
+        if (row[kgKey] === undefined && row[repsKey] === undefined && setIndex > 4) break;
+        
+        const kgVal = parseFloat(row[kgKey]) || 0;
+        const repsVal = row[repsKey] || '';
+        const repsInt = parseInt(String(repsVal).match(/\d+/)) || 0;
+        
+        if (repsInt > 0) {
+          dateData.totalVolume += kgVal * repsInt;
+          dateData.totalSets++;
+        }
+        setIndex++;
+      }
+    });
+    
+    const dataPoints = Array.from(dateMap.entries()).map(([date, data]) => ({
+      date,
+      volume: data.totalVolume,
+      sets: data.totalSets
+    }));
+    
+    if (dataPoints.length === 0) {
+      if (placeholder) {
+        placeholder.style.display = 'block';
+        placeholder.innerHTML = `<p>No training records found for the ${selectedMuscle} group.</p>`;
+      }
+      if (canvas) canvas.style.display = 'none';
+      return;
+    }
+    
+    dataPoints.sort((a, b) => parseDateStr(a.date) - parseDateStr(b.date));
+    
+    let latestDate = new Date(0);
+    dataPoints.forEach(pt => {
+      const d = parseDateStr(pt.date);
+      if (d > latestDate) latestDate = d;
+    });
+    
+    let filteredPoints = dataPoints;
+    if (activeChartTimeframe !== 'all') {
+      const cutoffDays = activeChartTimeframe === '7d' ? 7 : 30;
+      const cutoffTime = latestDate.getTime() - (cutoffDays * 24 * 60 * 60 * 1000);
+      
+      filteredPoints = dataPoints.filter(pt => {
+        return parseDateStr(pt.date).getTime() >= cutoffTime;
+      });
+    }
+    
+    if (filteredPoints.length === 0) {
+      if (placeholder) {
+        placeholder.style.display = 'block';
+        placeholder.innerHTML = `<p>No data found within the selected ${activeChartTimeframe === '7d' ? '7 days' : '30 days'}.</p>`;
+      }
+      if (canvas) canvas.style.display = 'none';
+      return;
+    }
+    
+    const labels = filteredPoints.map(pt => pt.date);
+    const volumeValues = filteredPoints.map(pt => pt.volume);
+    const setsValues = filteredPoints.map(pt => pt.sets);
+    
+    const bodyStyles = getComputedStyle(document.body);
+    const accentColor = bodyStyles.getPropertyValue('--accent-color').trim() || '#bd00ff';
+    const ctx = canvas.getContext('2d');
+    const datasets = [];
+    
+    // Total Volume dataset (Left axis)
     datasets.push({
-      label: 'Est. 1RM (kg)',
-      data: oneRmValues,
+      label: 'Total Volume (kg)',
+      data: volumeValues,
       borderColor: accentColor,
       borderWidth: 3,
       pointBackgroundColor: accentColor,
@@ -1204,94 +1477,87 @@ function drawChart() {
       pointHoverRadius: 6,
       pointRadius: 4,
       tension: 0.25,
-      yAxisID: 'y-1rm'
-    });
-  }
-  
-  if (showVolumeSeries) {
-    const volumeGradient = ctx.createLinearGradient(0, 0, 0, 250);
-    volumeGradient.addColorStop(0, accentColor + '20');
-    volumeGradient.addColorStop(1, accentColor + '00');
-    
-    datasets.push({
-      label: 'Total Volume (kg)',
-      data: volumeValues,
-      backgroundColor: volumeGradient,
-      borderColor: accentColor + '50',
-      borderWidth: 1.5,
-      pointBackgroundColor: accentColor + '70',
-      pointRadius: 2.5,
-      fill: true,
-      tension: 0.2,
       yAxisID: 'y-vol'
     });
-  }
-  
-  chartInstance = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: labels,
-      datasets: datasets
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: {
-        mode: 'index',
-        intersect: false
+    
+    // Sets completed dataset (Right axis)
+    datasets.push({
+      label: 'Working Sets Completed',
+      data: setsValues,
+      borderColor: '#ffffff',
+      borderWidth: 2,
+      pointBackgroundColor: '#ffffff',
+      pointRadius: 3,
+      tension: 0.2,
+      yAxisID: 'y-sets'
+    });
+    
+    chartInstance = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: datasets
       },
-      plugins: {
-        legend: {
-          display: true,
-          position: 'top',
-          labels: {
-            color: '#f5f6f8',
-            font: { family: 'Outfit', size: 10 }
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+          mode: 'index',
+          intersect: false
+        },
+        plugins: {
+          legend: {
+            display: true,
+            position: 'top',
+            labels: {
+              color: '#f5f6f8',
+              font: { family: 'Outfit', size: 10 }
+            }
+          },
+          tooltip: {
+            backgroundColor: 'rgba(25, 27, 38, 0.95)',
+            titleFont: { family: 'Outfit', size: 11, weight: 'bold' },
+            bodyFont: { family: 'Outfit', size: 11 },
+            borderColor: accentColor + '30',
+            borderWidth: 1,
+            cornerRadius: 8
           }
         },
-        tooltip: {
-          backgroundColor: 'rgba(25, 27, 38, 0.95)',
-          titleFont: { family: 'Outfit', size: 11, weight: 'bold' },
-          bodyFont: { family: 'Outfit', size: 11 },
-          borderColor: accentColor + '30',
-          borderWidth: 1,
-          cornerRadius: 8
-        }
-      },
-      scales: {
-        x: {
-          grid: { color: 'rgba(255, 255, 255, 0.03)' },
-          ticks: { color: '#8f94a6', font: { family: 'Outfit', size: 9 } }
-        },
-        'y-1rm': {
-          type: 'linear',
-          display: showOneRmSeries,
-          position: 'left',
-          grid: { color: 'rgba(255, 255, 255, 0.03)' },
-          ticks: { color: '#f5f6f8', font: { family: 'Outfit', size: 9 } },
-          title: {
+        scales: {
+          x: {
+            grid: { color: 'rgba(255, 255, 255, 0.03)' },
+            ticks: { color: '#8f94a6', font: { family: 'Outfit', size: 9 } }
+          },
+          'y-vol': {
+            type: 'linear',
             display: true,
-            text: '1RM (kg)',
-            color: '#f5f6f8',
-            font: { family: 'Outfit', size: 10, weight: 'bold' }
-          }
-        },
-        'y-vol': {
-          type: 'linear',
-          display: showVolumeSeries,
-          position: 'right',
-          grid: { drawOnChartArea: false },
-          ticks: { color: '#8f94a6', font: { family: 'Outfit', size: 9 } },
-          title: {
+            position: 'left',
+            grid: { color: 'rgba(255, 255, 255, 0.03)' },
+            ticks: { color: '#f5f6f8', font: { family: 'Outfit', size: 9 } },
+            title: {
+              display: true,
+              text: 'Volume (kg)',
+              color: '#f5f6f8',
+              font: { family: 'Outfit', size: 10, weight: 'bold' }
+            }
+          },
+          'y-sets': {
+            type: 'linear',
             display: true,
-            text: 'Volume (kg)',
-            color: '#8f94a6',
-            font: { family: 'Outfit', size: 10, weight: 'bold' }
+            position: 'right',
+            grid: { drawOnChartArea: false },
+            ticks: { color: '#8f94a6', font: { family: 'Outfit', size: 9 }, stepSize: 1 },
+            title: {
+              display: true,
+              text: 'Sets Completed',
+              color: '#8f94a6',
+              font: { family: 'Outfit', size: 10, weight: 'bold' }
+            }
           }
         }
       }
-    }
-  });
+    });
+  }
 }
 
 // CSV Export Generator
@@ -1344,7 +1610,14 @@ function loadCustomData() {
   const storedEx = localStorage.getItem('progreso-custom-exercises');
   if (storedEx) {
     try {
-      customExercises = JSON.parse(storedEx);
+      const parsed = JSON.parse(storedEx);
+      // Migrate strings to objects for backward compatibility
+      customExercises = parsed.map(item => {
+        if (typeof item === 'string') {
+          return { name: item, category: 'Core' }; // Default fallback category
+        }
+        return item;
+      });
     } catch (e) {
       console.error('Error loading custom exercises:', e);
       customExercises = [];
@@ -1360,6 +1633,47 @@ function loadCustomData() {
       customPresets = [];
     }
   }
+}
+
+// Get the category of an exercise (checking defaults, custom list, and keyword mapping)
+function getExerciseCategory(exerciseName) {
+  if (!exerciseName) return 'Core';
+  const nameLower = exerciseName.toLowerCase().trim();
+  
+  // 1. Check standard default catalogue
+  for (const [category, list] of Object.entries(DEFAULT_CATALOGUE)) {
+    if (list.some(ex => ex.toLowerCase() === nameLower)) {
+      return category;
+    }
+  }
+  
+  // 2. Check custom exercises
+  const matchedCustom = customExercises.find(ex => ex.name.toLowerCase() === nameLower);
+  if (matchedCustom) {
+    return matchedCustom.category;
+  }
+  
+  // 3. Fallback keyword matching for logs/imported names
+  if (nameLower.includes('squat') || nameLower.includes('leg') || nameLower.includes('calf') || nameLower.includes('lunge') || nameLower.includes('quad') || nameLower.includes('hamstring') || nameLower.includes('glute')) {
+    return 'Legs';
+  }
+  if (nameLower.includes('bench') || nameLower.includes('flye') || nameLower.includes('chest') || nameLower.includes('pushup') || nameLower.includes('push-up') || nameLower.includes('dip')) {
+    return 'Chest';
+  }
+  if (nameLower.includes('row') || nameLower.includes('pull') || nameLower.includes('lat') || nameLower.includes('chin') || nameLower.includes('deadlift')) {
+    return 'Back';
+  }
+  if (nameLower.includes('curl') || nameLower.includes('tricep') || nameLower.includes('bicep') || nameLower.includes('arm') || nameLower.includes('pushdown') || nameLower.includes('extension')) {
+    return 'Arms';
+  }
+  if (nameLower.includes('shoulder') || nameLower.includes('press') || nameLower.includes('raise') || nameLower.includes('delt')) {
+    return 'Shoulders';
+  }
+  if (nameLower.includes('plank') || nameLower.includes('crunch') || nameLower.includes('ab') || nameLower.includes('halo') || nameLower.includes('twist') || nameLower.includes('core')) {
+    return 'Core';
+  }
+  
+  return 'Core'; // default fallback
 }
 
 // Save Custom Exercises to localStorage
@@ -1502,7 +1816,7 @@ window.openPresetBuilder = function(presetIndex = null) {
   
   // Clear inputs
   document.getElementById('preset-exercise-search').value = '';
-  document.getElementById('preset-exercise-sets').value = '4';
+  document.getElementById('preset-builder-sets-input').value = '4';
   
   if (presetIndex === null) {
     titleEl.textContent = 'Create Workout Preset';
@@ -1515,6 +1829,13 @@ window.openPresetBuilder = function(presetIndex = null) {
     // Deep clone exercises
     presetBuilderExercises = preset.exercises.map(e => ({ ...e }));
   }
+  
+  // Reset categories inside preset modal catalogue
+  document.querySelectorAll('.preset-catalogue-categories .cat-pill').forEach(pill => {
+    pill.classList.toggle('active', pill.dataset.pcat === 'Legs');
+  });
+  activePresetBuilderCategory = 'Legs';
+  renderPresetBuilderCatalogue();
   
   renderPresetBuilderExercises();
   modal.classList.add('active');
@@ -1561,7 +1882,7 @@ function renderPresetBuilderExercises() {
 // Add exercise to preset builder list
 function addPresetExercise() {
   const searchInput = document.getElementById('preset-exercise-search');
-  const setsInput = document.getElementById('preset-exercise-sets');
+  const setsInput = document.getElementById('preset-builder-sets-input');
   
   const name = searchInput.value.trim();
   const sets = parseInt(setsInput.value) || 4;
@@ -1676,9 +1997,9 @@ function renderCatalogueExerciseList() {
       const item = document.createElement('div');
       item.className = 'catalogue-item';
       item.innerHTML = `
-        <span>${ex}</span>
+        <span>${ex.name} <span style="font-size:0.75rem; color:var(--text-secondary); margin-left:6px;">(${ex.category})</span></span>
         <div style="display:flex; gap:10px; align-items:center;">
-          <button class="add-ex-btn" title="Add to Routine" onclick="addCatalogueExercise('${ex.replace(/'/g, "\\'")}')">
+          <button class="add-ex-btn" title="Add to Routine" onclick="addCatalogueExercise('${ex.name.replace(/'/g, "\\'")}')">
             <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
             </svg>
@@ -1728,7 +2049,7 @@ window.addCatalogueExercise = function(name) {
 
 // Deletes a custom exercise
 window.deleteCustomExercise = function(idx) {
-  const name = customExercises[idx];
+  const name = customExercises[idx].name;
   if (confirm(`Are you sure you want to delete the custom exercise "${name}"?`)) {
     customExercises.splice(idx, 1);
     saveCustomExercises();
@@ -1740,24 +2061,162 @@ window.deleteCustomExercise = function(idx) {
 // Saves a new custom exercise
 function saveCustomExercise() {
   const input = document.getElementById('new-custom-ex-name');
+  const catSelect = document.getElementById('custom-ex-cat-select');
   const name = input.value.trim();
+  const category = catSelect ? catSelect.value : 'Core';
   
   if (!name) return;
   
   // Duplicate check
-  const allEx = [...Object.values(DEFAULT_CATALOGUE).flat(), ...customExercises].map(s => s.toLowerCase());
+  const customExNames = customExercises.map(e => e.name);
+  const allEx = [...Object.values(DEFAULT_CATALOGUE).flat(), ...customExNames].map(s => s.toLowerCase());
   if (allEx.includes(name.toLowerCase())) {
     alert('An exercise with this name already exists in the catalogue!');
     input.focus();
     return;
   }
   
-  customExercises.push(name);
-  customExercises.sort();
+  customExercises.push({ name: name, category: category });
+  customExercises.sort((a, b) => a.name.localeCompare(b.name));
   saveCustomExercises();
   
   input.value = '';
   renderCatalogueExerciseList();
   populateExerciseAutocomplete();
 }
+
+// Render the exercises catalogue list inside the preset builder modal
+function renderPresetBuilderCatalogue() {
+  const container = document.getElementById('preset-catalogue-exercise-list');
+  if (!container) return;
+  container.innerHTML = '';
+  
+  let exercises = [];
+  if (activePresetBuilderCategory === 'Custom') {
+    exercises = customExercises.map(ex => ex.name);
+  } else {
+    exercises = DEFAULT_CATALOGUE[activePresetBuilderCategory] || [];
+  }
+  
+  if (exercises.length === 0) {
+    container.innerHTML = '<p style="text-align:center; color:var(--text-secondary); font-size:0.8rem; padding: 10px 0; margin:0;">No exercises found.</p>';
+    return;
+  }
+  
+  exercises.forEach(name => {
+    const item = document.createElement('div');
+    item.style.display = 'flex';
+    item.style.justifyContent = 'space-between';
+    item.style.alignItems = 'center';
+    item.style.padding = '4px 6px';
+    item.style.borderRadius = '4px';
+    item.style.fontSize = '0.8rem';
+    item.style.background = 'rgba(255, 255, 255, 0.02)';
+    item.style.border = '1px solid rgba(255, 255, 255, 0.04)';
+    item.style.marginBottom = '4px';
+    
+    item.innerHTML = `
+      <span style="color:var(--text-primary); text-overflow:ellipsis; overflow:hidden; white-space:nowrap; max-width:180px;">${name}</span>
+      <button class="add-ex-btn" title="Add to Preset" onclick="addExerciseToPresetBuilderList('${name.replace(/'/g, "\\'")}')" style="background:transparent; border:none; color:var(--text-secondary); cursor:pointer; display:flex; align-items:center; justify-content:center; width:20px; height:20px;">
+        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+        </svg>
+      </button>
+    `;
+    container.appendChild(item);
+  });
+}
+
+// Add exercise from preset catalogue to temporary preset builder list
+window.addExerciseToPresetBuilderList = function(name) {
+  const setsInput = document.getElementById('preset-builder-sets-input');
+  const sets = parseInt(setsInput.value) || 4;
+  
+  presetBuilderExercises.push({ name, plannedSets: sets });
+  renderPresetBuilderExercises();
+};
+
+// Render muscle training split progress bars
+function renderMuscleBreakdown() {
+  const container = document.getElementById('muscle-bars-container');
+  if (!container) return;
+  
+  container.innerHTML = '';
+  
+  // Calculate date range filter (same as drawChart)
+  let latestDate = new Date(0);
+  logsData.forEach(row => {
+    if (!row['Date']) return;
+    const d = parseDateStr(row['Date']);
+    if (d > latestDate) latestDate = d;
+  });
+  
+  let filteredLogs = logsData;
+  if (activeChartTimeframe !== 'all' && logsData.length > 0) {
+    const cutoffDays = activeChartTimeframe === '7d' ? 7 : 30;
+    const cutoffTime = latestDate.getTime() - (cutoffDays * 24 * 60 * 60 * 1000);
+    
+    filteredLogs = logsData.filter(row => {
+      if (!row['Date']) return false;
+      const entryTime = parseDateStr(row['Date']).getTime();
+      return entryTime >= cutoffTime;
+    });
+  }
+  
+  const categorySets = {
+    Chest: 0,
+    Back: 0,
+    Legs: 0,
+    Arms: 0,
+    Shoulders: 0,
+    Core: 0
+  };
+  let totalSets = 0;
+  
+  filteredLogs.forEach(row => {
+    if (!row['Name of Exercise']) return;
+    const cat = getExerciseCategory(row['Name of Exercise']);
+    
+    let setIndex = 1;
+    while (true) {
+      const repsKey = `${setIndex} (reps)`;
+      if (row[repsKey] === undefined && setIndex > 4) break;
+      
+      const repsVal = row[repsKey] || '';
+      const repsInt = parseInt(String(repsVal).match(/\d+/)) || 0;
+      
+      if (repsInt > 0) {
+        if (categorySets[cat] !== undefined) {
+          categorySets[cat]++;
+        } else {
+          categorySets['Core']++;
+        }
+        totalSets++;
+      }
+      setIndex++;
+    }
+  });
+  
+  // Sort categories by number of sets descending
+  const sortedCategories = Object.keys(categorySets).sort((a, b) => categorySets[b] - categorySets[a]);
+  
+  sortedCategories.forEach(cat => {
+    const sets = categorySets[cat];
+    const percentage = totalSets > 0 ? Math.round((sets / totalSets) * 100) : 0;
+    
+    const row = document.createElement('div');
+    row.className = 'muscle-bar-row';
+    row.innerHTML = `
+      <div class="muscle-bar-header">
+        <span class="muscle-bar-name">${cat}</span>
+        <span class="muscle-bar-stats"><span class="highlight-val">${sets}</span> set${sets === 1 ? '' : 's'} (${percentage}%)</span>
+      </div>
+      <div class="muscle-bar-track">
+        <div class="muscle-bar-fill" style="width: ${percentage}%"></div>
+      </div>
+    `;
+    container.appendChild(row);
+  });
+}
+
 
