@@ -2,6 +2,12 @@
 let logsData = [];
 let chartInstance = null;
 let currentTheme = 'purple';
+let soundSettings = {
+  type: 'beep',
+  repeats: 2,
+  volume: 0.8,
+  duration: 0.35
+};
 
 // Interactive chart filter states
 let activeChartTimeframe = 'all'; // '7d', '30d', 'all'
@@ -153,6 +159,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadTheme();
   loadLogsFromStorage();
   loadCustomData();
+  loadSoundSettings();
   setupEventListeners();
   updateDateDisplays();
   updateDashboard();
@@ -804,6 +811,19 @@ function setupEventListeners() {
     });
   });
 
+  // Sound settings event listeners
+  const typeSelect = document.getElementById('sound-type-select');
+  const repeatsSelect = document.getElementById('sound-repeats-select');
+  const volSlider = document.getElementById('sound-volume-slider');
+  const durSlider = document.getElementById('sound-duration-slider');
+  const testSoundBtn = document.getElementById('test-sound-btn');
+  
+  if (typeSelect) typeSelect.addEventListener('change', saveSoundSettings);
+  if (repeatsSelect) repeatsSelect.addEventListener('change', saveSoundSettings);
+  if (volSlider) volSlider.addEventListener('input', saveSoundSettings);
+  if (durSlider) durSlider.addEventListener('input', saveSoundSettings);
+  if (testSoundBtn) testSoundBtn.addEventListener('click', () => playNotificationSound());
+
   // Close dropdowns on click outside
   document.addEventListener('click', () => {
     if (selectTrigger && selectOptions) {
@@ -1001,26 +1021,9 @@ function advanceSession(isLastSetOfExercise) {
   startActiveExerciseTracking();
 }
 
-// Programmatic Web Audio Synthesizer Beep
+// Programmatic Web Audio Synthesizer Beep (wrapper for custom rest sounds)
 function playBeep() {
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(880, ctx.currentTime);
-    gain.gain.setValueAtTime(0.1, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
-    
-    osc.start();
-    osc.stop(ctx.currentTime + 0.5);
-  } catch (e) {
-    console.warn('Audio feedback failed to execute:', e);
-  }
+  playNotificationSound();
 }
 
 // Summary Screen Implementation
@@ -2310,6 +2313,135 @@ function updateSeriesToggleButtons() {
     volBtn.textContent = 'Daily Volume';
     oneRmBtn.textContent = 'Cumulative Volume';
     if (infoBtn) infoBtn.style.display = 'none';
+  }
+}
+
+// Load audio settings from localStorage and populate inputs
+function loadSoundSettings() {
+  const stored = localStorage.getItem('progreso-sound-settings');
+  if (stored) {
+    try {
+      soundSettings = JSON.parse(stored);
+    } catch (e) {
+      console.error('Error loading sound settings:', e);
+    }
+  }
+  
+  // Update UI inputs to match loaded settings
+  const typeSelect = document.getElementById('sound-type-select');
+  const repeatsSelect = document.getElementById('sound-repeats-select');
+  const volSlider = document.getElementById('sound-volume-slider');
+  const durSlider = document.getElementById('sound-duration-slider');
+  
+  if (typeSelect) typeSelect.value = soundSettings.type || 'beep';
+  if (repeatsSelect) repeatsSelect.value = String(soundSettings.repeats || 2);
+  if (volSlider) {
+    volSlider.value = Math.round((soundSettings.volume !== undefined ? soundSettings.volume : 0.8) * 100);
+    const volValText = document.getElementById('sound-volume-value');
+    if (volValText) volValText.textContent = `${volSlider.value}%`;
+  }
+  if (durSlider) {
+    durSlider.value = Math.round((soundSettings.duration || 0.35) * 100);
+    const durValText = document.getElementById('sound-duration-value');
+    if (durValText) durValText.textContent = `${(durSlider.value / 100).toFixed(2)}s`;
+  }
+}
+
+// Save sound configuration to localStorage and update label metrics
+function saveSoundSettings() {
+  const typeSelect = document.getElementById('sound-type-select');
+  const repeatsSelect = document.getElementById('sound-repeats-select');
+  const volSlider = document.getElementById('sound-volume-slider');
+  const durSlider = document.getElementById('sound-duration-slider');
+  
+  if (typeSelect) soundSettings.type = typeSelect.value;
+  if (repeatsSelect) soundSettings.repeats = parseInt(repeatsSelect.value) || 2;
+  if (volSlider) {
+    soundSettings.volume = parseFloat(volSlider.value) / 100;
+    const volValText = document.getElementById('sound-volume-value');
+    if (volValText) volValText.textContent = `${volSlider.value}%`;
+  }
+  if (durSlider) {
+    soundSettings.duration = parseFloat(durSlider.value) / 100;
+    const durValText = document.getElementById('sound-duration-value');
+    if (durValText) durValText.textContent = `${soundSettings.duration.toFixed(2)}s`;
+  }
+  
+  localStorage.setItem('progreso-sound-settings', JSON.stringify(soundSettings));
+}
+
+// Play notification sound using the Web Audio API
+function playNotificationSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    const repeatCount = soundSettings.repeats || 2;
+    const volume = soundSettings.volume !== undefined ? soundSettings.volume : 0.8;
+    const duration = soundSettings.duration || 0.35;
+    const soundType = soundSettings.type || 'beep';
+    
+    let startTime = ctx.currentTime;
+    
+    for (let i = 0; i < repeatCount; i++) {
+      const playSoundInstance = (time) => {
+        // Main gain node for volume control
+        const gain = ctx.createGain();
+        gain.connect(ctx.destination);
+        gain.gain.setValueAtTime(0, time);
+        // Cap overall volume at a comfortable max level (e.g. 0.25)
+        const targetVol = volume * 0.25;
+        gain.gain.linearRampToValueAtTime(targetVol, time + 0.015);
+        gain.gain.setValueAtTime(targetVol, time + duration - 0.04);
+        gain.gain.exponentialRampToValueAtTime(0.001, time + duration);
+        
+        if (soundType === 'beep') {
+          const osc = ctx.createOscillator();
+          osc.connect(gain);
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(880, time);
+          osc.start(time);
+          osc.stop(time + duration);
+        } else if (soundType === 'whistle') {
+          // Whistle: beating effect with 2 high pitched oscillators + warble LFO
+          const osc1 = ctx.createOscillator();
+          const osc2 = ctx.createOscillator();
+          
+          osc1.connect(gain);
+          osc2.connect(gain);
+          
+          osc1.type = 'sine';
+          osc2.type = 'sine';
+          
+          // High whistle frequencies
+          osc1.frequency.setValueAtTime(2000, time);
+          osc2.frequency.setValueAtTime(2015, time);
+          
+          // Modulator LFO for the whistle fluttering vibrato
+          const lfo = ctx.createOscillator();
+          const lfoGain = ctx.createGain();
+          
+          lfo.frequency.setValueAtTime(16, time); // 16Hz flutter
+          lfoGain.gain.setValueAtTime(35, time);  // Pitch deviation of 35Hz
+          
+          lfo.connect(lfoGain);
+          lfoGain.connect(osc1.frequency);
+          lfoGain.connect(osc2.frequency);
+          
+          lfo.start(time);
+          lfo.stop(time + duration);
+          osc1.start(time);
+          osc2.start(time);
+          osc1.stop(time + duration);
+          osc2.stop(time + duration);
+        }
+      };
+      
+      // Schedule whistle/beep
+      playSoundInstance(startTime);
+      startTime += duration + 0.15; // Pause between repeats
+    }
+  } catch (e) {
+    console.warn('Audio synthesis failed to execute:', e);
   }
 }
 
