@@ -912,6 +912,26 @@ function setupEventListeners() {
     });
   }
 
+  // Collapsible Rest Timer Sounds Settings
+  const toggleSoundBtn = document.getElementById('toggle-sound-settings-btn');
+  const soundContainer = document.getElementById('sound-settings-collapse-container');
+  const soundArrow = document.getElementById('sound-settings-arrow');
+
+  if (toggleSoundBtn && soundContainer) {
+    toggleSoundBtn.addEventListener('click', () => {
+      const isOpen = soundContainer.classList.toggle('open');
+      if (isOpen) {
+        soundContainer.style.maxHeight = '400px';
+        soundContainer.style.opacity = '1';
+        if (soundArrow) soundArrow.classList.add('rotated');
+      } else {
+        soundContainer.style.maxHeight = '0px';
+        soundContainer.style.opacity = '0';
+        if (soundArrow) soundArrow.classList.remove('rotated');
+      }
+    });
+  }
+
   // Close dropdowns on click outside
   document.addEventListener('click', () => {
     if (selectTrigger && selectOptions) {
@@ -937,11 +957,14 @@ function setupEventListeners() {
   let initialTranslateX = 0;
   let gestureChecked = false;
   let isSwipeLock = false;
+  let isTouchTracked = false;
 
   const tabOrder = ['profile', 'workout', 'analytics'];
   const viewport = document.getElementById('tabs-viewport');
 
   document.addEventListener('touchstart', (e) => {
+    isTouchTracked = false;
+
     // Disable swipe navigation if modal or catalogue drawer is open
     const catalogueDrawer = document.getElementById('catalogue-drawer');
     const hasActiveModal = document.querySelector('.modal-overlay.active');
@@ -981,9 +1004,11 @@ function setupEventListeners() {
 
     touchStartX = e.touches[0].clientX;
     touchStartY = e.touches[0].clientY;
+    isTouchTracked = true;
   }, { passive: true });
 
   document.addEventListener('touchmove', (e) => {
+    if (!isTouchTracked) return;
     if (gestureChecked && !isSwipeLock) return;
     if (!viewport) return;
 
@@ -1033,6 +1058,8 @@ function setupEventListeners() {
   }, { passive: false });
 
   document.addEventListener('touchend', (e) => {
+    if (!isTouchTracked) return;
+
     if (isSwipeLock && isDragging && viewport) {
       viewport.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)';
 
@@ -1063,6 +1090,7 @@ function setupEventListeners() {
     isDragging = false;
     gestureChecked = false;
     isSwipeLock = false;
+    isTouchTracked = false;
   }, { passive: true });
 }
 
@@ -2889,6 +2917,7 @@ function renderAverageWeights() {
       <span class="avg-weight-name">${ex.name}</span>
       <span class="avg-weight-value-badge">${displayValue}</span>
     `;
+    container.appendChild(item);
   });
 }
 

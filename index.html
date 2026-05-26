@@ -65,51 +65,56 @@
 
       <!-- Rest Timer Sound Settings Card -->
       <section class="card sound-card" style="margin-bottom: 24px;">
-        <h3 class="card-title">Rest Timer Sounds</h3>
-        <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 16px;">
-          Configure your alert signal style, volume, and duration for rest completion.
-        </p>
-        <div style="display: flex; flex-direction: column; gap: 14px;">
-          <div style="display: flex; gap: 12px; width: 100%;">
-            <div class="form-group" style="flex: 1; margin-bottom: 0;">
-              <label for="sound-type-select">Signal Style</label>
-              <select id="sound-type-select" style="padding: 10px 12px; font-size: 0.85rem; border-radius: 10px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); color: var(--text-primary); width: 100%;">
-                <option value="beep">Digital Beep</option>
-                <option value="whistle">Pea Whistle</option>
-              </select>
+        <div class="card-title" id="toggle-sound-settings-btn" style="display: flex; justify-content: space-between; align-items: center; width: 100%; cursor: pointer; margin-bottom: 0;">
+          <span>Rest Timer Sounds</span>
+          <div class="arrow" id="sound-settings-arrow" style="transition: transform 0.2s;"></div>
+        </div>
+        <div id="sound-settings-collapse-container" class="collapse-container">
+          <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 16px; margin-top: 10px;">
+            Configure your alert signal style, volume, and duration for rest completion.
+          </p>
+          <div style="display: flex; flex-direction: column; gap: 14px;">
+            <div style="display: flex; gap: 12px; width: 100%;">
+              <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                <label for="sound-type-select">Signal Style</label>
+                <select id="sound-type-select" style="padding: 10px 12px; font-size: 0.85rem; border-radius: 10px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); color: var(--text-primary); width: 100%;">
+                  <option value="beep">Digital Beep</option>
+                  <option value="whistle">Pea Whistle</option>
+                </select>
+              </div>
+              <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                <label for="sound-repeats-select">Signals Count</label>
+                <select id="sound-repeats-select" style="padding: 10px 12px; font-size: 0.85rem; border-radius: 10px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); color: var(--text-primary); width: 100%;">
+                  <option value="1">1 Signal</option>
+                  <option value="2">2 Signals</option>
+                  <option value="3">3 Signals</option>
+                </select>
+              </div>
             </div>
-            <div class="form-group" style="flex: 1; margin-bottom: 0;">
-              <label for="sound-repeats-select">Signals Count</label>
-              <select id="sound-repeats-select" style="padding: 10px 12px; font-size: 0.85rem; border-radius: 10px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); color: var(--text-primary); width: 100%;">
-                <option value="1">1 Signal</option>
-                <option value="2">2 Signals</option>
-                <option value="3">3 Signals</option>
-              </select>
+            
+            <div class="form-group" style="margin-bottom: 0;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <label for="sound-volume-slider" style="margin-bottom: 0;">Alert Volume</label>
+                <span id="sound-volume-value" style="font-size: 0.85rem; font-weight: 600; color: var(--accent-color);">80%</span>
+              </div>
+              <input type="range" id="sound-volume-slider" min="0" max="100" value="80" style="width: 100%;">
             </div>
-          </div>
-          
-          <div class="form-group" style="margin-bottom: 0;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-              <label for="sound-volume-slider" style="margin-bottom: 0;">Alert Volume</label>
-              <span id="sound-volume-value" style="font-size: 0.85rem; font-weight: 600; color: var(--accent-color);">80%</span>
-            </div>
-            <input type="range" id="sound-volume-slider" min="0" max="100" value="80" style="width: 100%;">
-          </div>
 
-          <div class="form-group" style="margin-bottom: 0;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-              <label for="sound-duration-slider" style="margin-bottom: 0;">Signal Duration</label>
-              <span id="sound-duration-value" style="font-size: 0.85rem; font-weight: 600; color: var(--accent-color);">0.35s</span>
+            <div class="form-group" style="margin-bottom: 0;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <label for="sound-duration-slider" style="margin-bottom: 0;">Signal Duration</label>
+                <span id="sound-duration-value" style="font-size: 0.85rem; font-weight: 600; color: var(--accent-color);">0.35s</span>
+              </div>
+              <input type="range" id="sound-duration-slider" min="10" max="100" step="5" value="35" style="width: 100%;">
             </div>
-            <input type="range" id="sound-duration-slider" min="10" max="100" step="5" value="35" style="width: 100%;">
-          </div>
 
-          <button class="btn btn-secondary" id="test-sound-btn" style="width: 100%; border-radius: 10px; padding: 10px; font-size: 0.85rem; display: flex; justify-content: center; gap: 8px; align-items: center;">
-            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/>
-            </svg>
-            Test Notification Sound
-          </button>
+            <button class="btn btn-secondary" id="test-sound-btn" style="width: 100%; border-radius: 10px; padding: 10px; font-size: 0.85rem; display: flex; justify-content: center; gap: 8px; align-items: center;">
+              <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/>
+              </svg>
+              Test Notification Sound
+            </button>
+          </div>
         </div>
       </section>
 
@@ -559,8 +564,7 @@
     <button class="nav-item nav-item-main active" data-tab="workout" title="Workout Session">
       <div class="nav-main-gbox">
         <svg width="28" height="28" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-          <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6.32 17.68A2.25 2.25 0 015 15.632V14.5a2.25 2.25 0 01.32-1.15l.48-.82a2.25 2.25 0 011.15-.81l1.58-.35M17.68 17.68A2.25 2.25 0 0019 15.632V14.5a2.25 2.25 0 00-.32-1.15l-.48-.82a2.25 2.25 0 00-1.15-.81l-1.58-.35M8.5 8h7M12 5v14M5.5 12h13M3 10a1 1 0 011-1h1a1 1 0 011 1v4a1 1 0 01-1 1H4a1 1 0 01-1-1v-4zm14 0a1 1 0 011-1h1a1 1 0 011 1v4a1 1 0 01-1 1h-1a1 1 0 01-1-1v-4z"/>
         </svg>
       </div>
       <span>Workout</span>
