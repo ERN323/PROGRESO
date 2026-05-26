@@ -188,22 +188,12 @@ function getTodayDateString() {
 
 // Bottom Navigation Tab Selector
 function switchTab(tabName) {
-  // Determine direction for slide transition
-  const currentActiveTabEl = document.querySelector('.nav-item.active');
-  let direction = '';
-  if (currentActiveTabEl) {
-    const currentTab = currentActiveTabEl.dataset.tab;
-    const tabOrder = ['profile', 'workout', 'analytics'];
-    const currentIndex = tabOrder.indexOf(currentTab);
-    const targetIndex = tabOrder.indexOf(tabName);
-    if (currentIndex !== -1 && targetIndex !== -1 && currentIndex !== targetIndex) {
-      direction = targetIndex > currentIndex ? 'right' : 'left';
-    }
-  }
+  const tabOrder = ['profile', 'workout', 'analytics'];
+  const targetIndex = tabOrder.indexOf(tabName);
 
-  // Hide all tab panels and clear navigation item states, removing previous transition classes
+  // Hide all tab panels and clear navigation item states
   document.querySelectorAll('.tab-panel').forEach(panel => {
-    panel.classList.remove('active', 'slide-from-left', 'slide-from-right');
+    panel.classList.remove('active');
   });
   document.querySelectorAll('.nav-item').forEach(item => {
     item.classList.remove('active');
@@ -213,16 +203,18 @@ function switchTab(tabName) {
   const targetPanel = document.getElementById(`panel-${tabName}`);
   if (targetPanel) {
     targetPanel.classList.add('active');
-    if (direction === 'left') {
-      targetPanel.classList.add('slide-from-left');
-    } else if (direction === 'right') {
-      targetPanel.classList.add('slide-from-right');
-    }
   }
   
   const targetTab = document.querySelector(`.nav-item[data-tab="${tabName}"]`);
   if (targetTab) {
     targetTab.classList.add('active');
+  }
+
+  // Shift viewport to active tab panel
+  const viewport = document.getElementById('tabs-viewport');
+  if (viewport) {
+    viewport.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)';
+    viewport.style.transform = `translateX(-${targetIndex * 100}%)`;
   }
   
   // Handle tab specific events
@@ -922,13 +914,16 @@ function setupEventListeners() {
     }
   });
 
-  // Swipe navigation detection
+  // Swipe navigation detection (finger-following)
   let touchStartX = 0;
   let touchStartY = 0;
-  let touchEndX = 0;
-  let touchEndY = 0;
+  let currentTranslateX = 0;
+  let isDragging = false;
+  let containerWidth = 0;
+  let initialTranslateX = 0;
 
   const tabOrder = ['profile', 'workout', 'analytics'];
+  const viewport = document.getElementById('tabs-viewport');
 
   document.addEventListener('touchstart', (e) => {
     // Disable swipe navigation if modal or catalogue drawer is open
@@ -949,60 +944,84 @@ function setupEventListeners() {
         target.closest('.table-wrapper')) {
       return;
     }
-    touchStartX = e.changedTouches[0].screenX;
-    touchStartY = e.changedTouches[0].screenY;
+
+    const currentTabEl = document.querySelector('.nav-item.active');
+    if (!currentTabEl) return;
+    const currentTab = currentTabEl.dataset.tab;
+    const currentIndex = tabOrder.indexOf(currentTab);
+    if (currentIndex === -1) return;
+
+    isDragging = true;
+    
+    // Get actual width of container
+    const container = document.querySelector('.container');
+    containerWidth = container ? container.offsetWidth : (window.innerWidth > 480 ? 480 : window.innerWidth);
+    
+    initialTranslateX = -currentIndex * containerWidth;
+    currentTranslateX = initialTranslateX;
+
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+
+    if (viewport) {
+      viewport.style.transition = 'none'; // Disable animations for real-time thumb tracking
+    }
+  }, { passive: true });
+
+  document.addEventListener('touchmove', (e) => {
+    if (!isDragging || !viewport) return;
+
+    const touchX = e.touches[0].clientX;
+    const touchY = e.touches[0].clientY;
+
+    const diffX = touchX - touchStartX;
+    const diffY = touchY - touchStartY;
+
+    if (Math.abs(diffX) > Math.abs(diffY)) {
+      let targetTranslate = initialTranslateX + diffX;
+
+      // Add elastic boundaries resistance
+      if (targetTranslate > 0) {
+        targetTranslate = diffX * 0.25;
+      } else if (targetTranslate < -2 * containerWidth) {
+        const overflow = targetTranslate - (-2 * containerWidth);
+        targetTranslate = -2 * containerWidth + overflow * 0.25;
+      }
+
+      currentTranslateX = targetTranslate;
+      viewport.style.transform = `translateX(${currentTranslateX}px)`;
+    }
   }, { passive: true });
 
   document.addEventListener('touchend', (e) => {
-    // Disable swipe navigation if modal or catalogue drawer is open
-    const catalogueDrawer = document.getElementById('catalogue-drawer');
-    const hasActiveModal = document.querySelector('.modal-overlay.active');
-    if (hasActiveModal || (catalogueDrawer && catalogueDrawer.classList.contains('open'))) {
-      return;
-    }
+    if (!isDragging || !viewport) return;
+    isDragging = false;
 
-    const target = e.target;
-    if (target.closest('input[type="range"]') || 
-        target.closest('canvas') || 
-        target.closest('.custom-select-wrapper') || 
-        target.closest('.custom-options') ||
-        target.closest('.chart-container') ||
-        target.closest('#planned-list') ||
-        target.closest('.logs-table-container') ||
-        target.closest('.table-wrapper')) {
-      return;
-    }
-    
-    touchEndX = e.changedTouches[0].screenX;
-    touchEndY = e.changedTouches[0].screenY;
-    
-    handleSwipeGesture();
-  }, { passive: true });
+    // Restore smooth easing transitions
+    viewport.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)';
 
-  function handleSwipeGesture() {
-    const diffX = touchEndX - touchStartX;
-    const diffY = touchEndY - touchStartY;
-    
-    if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 75) {
-      const currentTabEl = document.querySelector('.nav-item.active');
-      if (!currentTabEl) return;
-      const currentTab = currentTabEl.dataset.tab;
-      const currentIndex = tabOrder.indexOf(currentTab);
-      if (currentIndex === -1) return;
-      
-      if (diffX < 0) {
-        // Swipe left (next tab)
-        if (currentIndex < tabOrder.length - 1) {
-          switchTab(tabOrder[currentIndex + 1]);
-        }
-      } else {
-        // Swipe right (previous tab)
-        if (currentIndex > 0) {
-          switchTab(tabOrder[currentIndex - 1]);
-        }
+    const currentTabEl = document.querySelector('.nav-item.active');
+    if (!currentTabEl) return;
+    const currentTab = currentTabEl.dataset.tab;
+    const currentIndex = tabOrder.indexOf(currentTab);
+
+    const diffX = e.changedTouches[0].clientX - touchStartX;
+    const threshold = containerWidth * 0.25; // 25% width swipe threshold
+
+    let targetIndex = currentIndex;
+
+    if (diffX < -threshold) {
+      if (currentIndex < tabOrder.length - 1) {
+        targetIndex = currentIndex + 1;
+      }
+    } else if (diffX > threshold) {
+      if (currentIndex > 0) {
+        targetIndex = currentIndex - 1;
       }
     }
-  }
+
+    switchTab(tabOrder[targetIndex]);
+  }, { passive: true });
 }
 
 // Planner Screens Implementation

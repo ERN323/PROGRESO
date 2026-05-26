@@ -112,49 +112,24 @@ header {
   color: var(--text-secondary);
 }
 
-/* Tabs Toggle Panels */
+/* Tabs Toggle Viewport & Panels */
+.container {
+  width: 100%;
+  overflow: hidden; /* Hide off-screen tab panels */
+}
+
+.tabs-viewport {
+  display: flex;
+  width: 100%;
+  transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  will-change: transform;
+}
+
 .tab-panel {
-  display: none;
-}
-
-.tab-panel.active {
+  flex: 0 0 100%;
+  width: 100%;
+  box-sizing: border-box;
   display: block;
-  animation: tabFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-.tab-panel.active.slide-from-left {
-  animation: slideFromLeft 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
-}
-
-.tab-panel.active.slide-from-right {
-  animation: slideFromRight 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
-}
-
-@keyframes tabFadeIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes slideFromLeft {
-  from {
-    opacity: 0;
-    transform: translateX(-100%);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes slideFromRight {
-  from {
-    opacity: 0;
-    transform: translateX(100%);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
 }
 
 /* Theme Controller */
