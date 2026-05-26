@@ -1307,11 +1307,60 @@ input[type="range"]::-moz-range-thumb:hover {
   background: #ffffff;
 }
 
-.sound-card {
-  border-color: rgba(255, 255, 255, 0.08);
-  transition: border-color 0.3s;
-}
-
 .sound-card:hover {
   border-color: var(--accent-color);
+}
+
+/* Average Lifted Weight list items */
+.avg-weight-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  transition: border-color 0.2s, background 0.2s;
+  animation: slideIn 0.25s ease-out;
+}
+
+.avg-weight-item:hover {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.avg-weight-name {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.avg-weight-value-badge {
+  background: var(--accent-bg-glow);
+  color: var(--accent-color);
+  border: 1px solid var(--accent-glow);
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  box-shadow: 0 0 8px var(--accent-bg-glow);
+}
+
+/* Specific styling for collapse arrows inside card titles */
+.card-title .arrow {
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 5px solid var(--text-secondary);
+  transition: transform 0.2s ease-in-out, border-top-color 0.2s;
+}
+
+.card-title:hover .arrow {
+  border-top-color: var(--text-primary);
+}
+
+.card-title .arrow.rotated {
+  transform: rotate(180deg);
+  border-top-color: var(--accent-color);
 }

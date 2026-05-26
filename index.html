@@ -442,16 +442,56 @@
             <p>Select an exercise to view charts.</p>
           </div>
         </div>
+      <!-- Average Lifted Weight Card -->
+      <section class="card avg-weight-card" id="avg-weight-card" style="margin-bottom: 20px; border-color: rgba(255, 255, 255, 0.08);">
+        <h3 class="card-title">Average Lifted Weight</h3>
+        <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 12px;">
+          Average weight used per exercise for the selected muscle group and timeframe.
+        </p>
+        
+        <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px;">
+          <!-- Custom styled dropdown for selecting Muscle Group -->
+          <div class="custom-select-wrapper" id="avg-muscle-select-wrapper">
+            <div class="custom-select-trigger" id="avg-muscle-select-trigger">
+              <span id="avg-muscle-select-text">Back</span>
+              <div class="arrow"></div>
+            </div>
+            <div class="custom-options" id="avg-muscle-select-options">
+              <div class="custom-option" data-value="Legs">Legs</div>
+              <div class="custom-option" data-value="Chest">Chest</div>
+              <div class="custom-option selected" data-value="Back">Back</div>
+              <div class="custom-option" data-value="Arms">Arms</div>
+              <div class="custom-option" data-value="Shoulders">Shoulders</div>
+              <div class="custom-option" data-value="Core">Core</div>
+            </div>
+          </div>
+
+          <!-- Timeframe selector -->
+          <div class="timeframe-selector" id="avg-timeframe-selector">
+            <button class="timeframe-btn active" data-avg-timeframe="last">Last Session</button>
+            <button class="timeframe-btn" data-avg-timeframe="7d">7 Days</button>
+            <button class="timeframe-btn" data-avg-timeframe="30d">30 Days</button>
+          </div>
+        </div>
+
+        <div id="avg-weight-list-container" style="display: flex; flex-direction: column; gap: 8px;">
+          <!-- Dynamically populated -->
+        </div>
       </section>
 
       <!-- Muscle Training Split Breakdown Card -->
       <section class="card breakdown-card" id="muscle-breakdown-card" style="margin-bottom: 20px;">
-        <h3 class="card-title">Training Distribution</h3>
-        <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 16px;">
-          Percentage of working sets completed per body field in the selected timeframe.
-        </p>
-        <div id="muscle-bars-container" style="display: flex; flex-direction: column; gap: 12px;">
-          <!-- Dynamically populated progress bars -->
+        <div class="card-title" id="toggle-breakdown-btn" style="display: flex; justify-content: space-between; align-items: center; width: 100%; cursor: pointer; margin-bottom: 0;">
+          <span>Training Distribution</span>
+          <div class="arrow rotated" id="breakdown-arrow" style="transition: transform 0.2s;"></div>
+        </div>
+        <div id="breakdown-collapse-container" class="collapse-container open" style="max-height: 400px; opacity: 1; overflow-y: auto;">
+          <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 16px; margin-top: 10px;">
+            Percentage of working sets completed per body field in the selected timeframe.
+          </p>
+          <div id="muscle-bars-container" style="display: flex; flex-direction: column; gap: 12px;">
+            <!-- Dynamically populated progress bars -->
+          </div>
         </div>
       </section>
  

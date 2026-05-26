@@ -32,6 +32,8 @@ let activeEditingPresetIndex = null; // null if creating, number if editing
 let activeCatalogueCategory = 'Legs';
 let activeChartMode = 'exercise'; // 'exercise' or 'muscle'
 let activePresetBuilderCategory = 'Legs';
+let activeAvgMuscleGroup = 'Back';
+let activeAvgTimeframe = 'last';
 
 const DEFAULT_CATALOGUE = {
   Legs: [
@@ -211,6 +213,7 @@ function switchTab(tabName) {
     setTimeout(() => {
       renderMuscleBreakdown();
       drawChart();
+      renderAverageWeights();
     }, 50);
   } else if (tabName === 'profile') {
     updateProfileStats();
@@ -469,9 +472,9 @@ function setupEventListeners() {
   });
 
   // Timeframe selector click events
-  document.querySelectorAll('.timeframe-btn').forEach(btn => {
+  document.querySelectorAll('.analytics-filters .timeframe-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      document.querySelectorAll('.timeframe-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.analytics-filters .timeframe-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       activeChartTimeframe = btn.dataset.timeframe;
       renderMuscleBreakdown();
@@ -824,6 +827,67 @@ function setupEventListeners() {
   if (durSlider) durSlider.addEventListener('input', saveSoundSettings);
   if (testSoundBtn) testSoundBtn.addEventListener('click', () => playNotificationSound());
 
+  // Average Weight Muscle Group Dropdown Toggle
+  const avgMuscleTrigger = document.getElementById('avg-muscle-select-trigger');
+  const avgMuscleOptions = document.getElementById('avg-muscle-select-options');
+  if (avgMuscleTrigger && avgMuscleOptions) {
+    avgMuscleTrigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = avgMuscleOptions.classList.toggle('open');
+      avgMuscleTrigger.classList.toggle('open', isOpen);
+    });
+  }
+
+  // Average Weight Muscle Select Options
+  document.querySelectorAll('#avg-muscle-select-options .custom-option').forEach(opt => {
+    opt.addEventListener('click', () => {
+      activeAvgMuscleGroup = opt.dataset.value;
+      const textSpan = document.getElementById('avg-muscle-select-text');
+      if (textSpan) textSpan.textContent = opt.textContent;
+
+      document.querySelectorAll('#avg-muscle-select-options .custom-option').forEach(item => {
+        item.classList.toggle('selected', item.dataset.value === opt.dataset.value);
+      });
+
+      if (avgMuscleOptions && avgMuscleTrigger) {
+        avgMuscleOptions.classList.remove('open');
+        avgMuscleTrigger.classList.remove('open');
+      }
+
+      renderAverageWeights();
+    });
+  });
+
+  // Average Weight Timeframe Selector
+  document.querySelectorAll('#avg-timeframe-selector .timeframe-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#avg-timeframe-selector .timeframe-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeAvgTimeframe = btn.dataset.avgTimeframe;
+      renderAverageWeights();
+    });
+  });
+
+  // Collapsible Training Distribution
+  const toggleBreakdownBtn = document.getElementById('toggle-breakdown-btn');
+  const breakdownContainer = document.getElementById('breakdown-collapse-container');
+  const breakdownArrow = document.getElementById('breakdown-arrow');
+
+  if (toggleBreakdownBtn && breakdownContainer) {
+    toggleBreakdownBtn.addEventListener('click', () => {
+      const isOpen = breakdownContainer.classList.toggle('open');
+      if (isOpen) {
+        breakdownContainer.style.maxHeight = '400px';
+        breakdownContainer.style.opacity = '1';
+        if (breakdownArrow) breakdownArrow.classList.add('rotated');
+      } else {
+        breakdownContainer.style.maxHeight = '0px';
+        breakdownContainer.style.opacity = '0';
+        if (breakdownArrow) breakdownArrow.classList.remove('rotated');
+      }
+    });
+  }
+
   // Close dropdowns on click outside
   document.addEventListener('click', () => {
     if (selectTrigger && selectOptions) {
@@ -833,6 +897,10 @@ function setupEventListeners() {
     if (muscleTrigger && muscleOptions) {
       muscleOptions.classList.remove('open');
       muscleTrigger.classList.remove('open');
+    }
+    if (avgMuscleTrigger && avgMuscleOptions) {
+      avgMuscleOptions.classList.remove('open');
+      avgMuscleTrigger.classList.remove('open');
     }
   });
 }
@@ -1064,6 +1132,7 @@ function updateDashboard() {
   renderCatalogue();
   renderMuscleBreakdown();
   drawChart();
+  renderAverageWeights();
 }
 
 function populateExerciseSelect() {
@@ -2445,4 +2514,135 @@ function playNotificationSound() {
   }
 }
 
+// Render Average Lifted Weights section
+function renderAverageWeights() {
+  const container = document.getElementById('avg-weight-list-container');
+  if (!container) return;
+  container.innerHTML = '';
+
+  if (!logsData || logsData.length === 0) {
+    container.innerHTML = '<div style="color: var(--text-secondary); text-align: center; padding: 12px; font-size: 0.9rem;">No workout data available.</div>';
+    return;
+  }
+
+  // Find the overall latest date in logsData
+  let latestDate = new Date(0);
+  logsData.forEach(row => {
+    if (!row['Date']) return;
+    const d = parseDateStr(row['Date']);
+    if (d > latestDate) latestDate = d;
+  });
+
+  let filteredLogs = [];
+
+  if (activeAvgTimeframe === 'last') {
+    // Find the most recent date on which an exercise in the active muscle group was performed
+    let lastSessionDateStr = '';
+    let lastSessionDate = new Date(0);
+
+    logsData.forEach(row => {
+      if (!row['Date'] || !row['Name of Exercise']) return;
+      const cat = getExerciseCategory(row['Name of Exercise']);
+      if (cat === activeAvgMuscleGroup) {
+        const d = parseDateStr(row['Date']);
+        if (d > lastSessionDate) {
+          lastSessionDate = d;
+          lastSessionDateStr = row['Date'];
+        }
+      }
+    });
+
+    if (lastSessionDateStr) {
+      filteredLogs = logsData.filter(row => row['Date'] === lastSessionDateStr && getExerciseCategory(row['Name of Exercise']) === activeAvgMuscleGroup);
+    }
+  } else {
+    // 7d or 30d
+    const days = activeAvgTimeframe === '7d' ? 7 : 30;
+    const cutoffTime = latestDate.getTime() - (days * 24 * 60 * 60 * 1000);
+    filteredLogs = logsData.filter(row => {
+      if (!row['Date'] || !row['Name of Exercise']) return false;
+      const cat = getExerciseCategory(row['Name of Exercise']);
+      if (cat !== activeAvgMuscleGroup) return false;
+      const d = parseDateStr(row['Date']);
+      return d.getTime() >= cutoffTime;
+    });
+  }
+
+  // Calculate the average weight for each exercise in filteredLogs
+  const exerciseWeights = {};
+
+  filteredLogs.forEach(row => {
+    const exName = row['Name of Exercise'];
+    if (!exName) return;
+
+    if (!exerciseWeights[exName]) {
+      exerciseWeights[exName] = [];
+    }
+
+    let setIndex = 1;
+    while (true) {
+      const repsKey = `${setIndex} (reps)`;
+      const weightKey = `${setIndex} (kg)`;
+      if (row[repsKey] === undefined && setIndex > 4) break;
+
+      const repsVal = row[repsKey] || '';
+      const repsInt = parseInt(String(repsVal).match(/\d+/)) || 0;
+      
+      if (repsInt > 0) {
+        const weightVal = row[weightKey] || '';
+        const weightNum = parseFloat(String(weightVal || '').replace(/[^\d.]/g, '')) || 0;
+        exerciseWeights[exName].push(weightNum);
+      }
+      setIndex++;
+    }
+  });
+
+  // Calculate averages and render
+  const exercisesToRender = [];
+  for (const [exName, weights] of Object.entries(exerciseWeights)) {
+    if (weights.length === 0) continue;
+
+    const allZero = weights.every(w => w === 0);
+    let avgWeight = 0;
+    if (!allZero) {
+      const nonZeroWeights = weights.filter(w => w > 0);
+      const sum = nonZeroWeights.reduce((a, b) => a + b, 0);
+      avgWeight = nonZeroWeights.length > 0 ? sum / nonZeroWeights.length : 0;
+    }
+
+    exercisesToRender.push({
+      name: exName,
+      allZero: allZero,
+      avgWeight: avgWeight
+    });
+  }
+
+  // Sort exercises alphabetically
+  exercisesToRender.sort((a, b) => a.name.localeCompare(b.name));
+
+  if (exercisesToRender.length === 0) {
+    container.innerHTML = `<div style="color: var(--text-secondary); text-align: center; padding: 12px; font-size: 0.9rem;">No exercises found for ${activeAvgMuscleGroup} in this timeframe.</div>`;
+    return;
+  }
+
+  exercisesToRender.forEach(ex => {
+    const item = document.createElement('div');
+    item.className = 'avg-weight-item';
+    
+    let displayValue = '';
+    if (ex.allZero) {
+      displayValue = 'Bodyweight';
+    } else {
+      const val = ex.avgWeight;
+      const formattedVal = val % 1 === 0 ? val.toString() : val.toFixed(1);
+      displayValue = `${formattedVal} kg`;
+    }
+
+    item.innerHTML = `
+      <span class="avg-weight-name">${ex.name}</span>
+      <span class="avg-weight-value-badge">${displayValue}</span>
+    `;
+    container.appendChild(item);
+  });
+}
 
