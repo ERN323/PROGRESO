@@ -1439,6 +1439,11 @@ function drawChart() {
         datasets: datasets
       },
       options: {
+        layout: {
+          padding: {
+            bottom: 12
+          }
+        },
         responsive: true,
         maintainAspectRatio: false,
         interaction: {
@@ -1643,6 +1648,11 @@ function drawChart() {
         datasets: datasets
       },
       options: {
+        layout: {
+          padding: {
+            bottom: 12
+          }
+        },
         responsive: true,
         maintainAspectRatio: false,
         interaction: {
