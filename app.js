@@ -210,11 +210,11 @@ function switchTab(tabName) {
     targetTab.classList.add('active');
   }
 
-  // Shift viewport to active tab panel
+  // Shift viewport to active tab panel (including the 24px gap between panels)
   const viewport = document.getElementById('tabs-viewport');
   if (viewport) {
     viewport.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)';
-    viewport.style.transform = `translateX(-${targetIndex * 100}%)`;
+    viewport.style.transform = `translateX(calc(-${targetIndex * 100}% - ${targetIndex * 24}px))`;
   }
   
   // Handle tab specific events
@@ -957,7 +957,7 @@ function setupEventListeners() {
     const container = document.querySelector('.container');
     containerWidth = container ? container.offsetWidth : (window.innerWidth > 480 ? 480 : window.innerWidth);
     
-    initialTranslateX = -currentIndex * containerWidth;
+    initialTranslateX = -currentIndex * (containerWidth + 24);
     currentTranslateX = initialTranslateX;
 
     touchStartX = e.touches[0].clientX;
@@ -983,9 +983,9 @@ function setupEventListeners() {
       // Add elastic boundaries resistance
       if (targetTranslate > 0) {
         targetTranslate = diffX * 0.25;
-      } else if (targetTranslate < -2 * containerWidth) {
-        const overflow = targetTranslate - (-2 * containerWidth);
-        targetTranslate = -2 * containerWidth + overflow * 0.25;
+      } else if (targetTranslate < -2 * (containerWidth + 24)) {
+        const overflow = targetTranslate - (-2 * (containerWidth + 24));
+        targetTranslate = -2 * (containerWidth + 24) + overflow * 0.25;
       }
 
       currentTranslateX = targetTranslate;

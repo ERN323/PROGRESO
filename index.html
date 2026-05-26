@@ -25,16 +25,21 @@
 <body class="theme-purple">
 
   <div class="container">
+    <!-- STATIC HEADER -->
+    <header class="static-header" style="margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; width: 100%;">
+      <div class="logo-section">
+        <h1>PROGRESO</h1>
+      </div>
+    </header>
+
     <div class="tabs-viewport" id="tabs-viewport">
     
       <!-- PANEL 1: PROFILE & SETTINGS -->
       <div id="panel-profile" class="tab-panel">
-      <header>
-        <div class="logo-section">
-          <h1>PROGRESO</h1>
-          <p>Personal Profile & Settings</p>
+        <!-- Sliding Subtitle -->
+        <div class="tab-subtitle" style="text-align: center; margin-top: -8px; margin-bottom: 24px; font-size: 0.85rem; color: var(--text-secondary);">
+          Personal Profile & Settings
         </div>
-      </header>
 
       <!-- User Statistics -->
       <section class="card profile-card" style="margin-bottom: 24px;">
@@ -139,12 +144,10 @@
 
     <!-- PANEL 2: WORKOUT SESSION TRACKER (Default Tab) -->
     <div id="panel-workout" class="tab-panel active">
-      <header>
-        <div class="logo-section">
-          <h1>PROGRESO</h1>
-          <p>Active Workout Tracker</p>
-        </div>
-      </header>
+      <!-- Sliding Subtitle -->
+      <div class="tab-subtitle" style="text-align: center; margin-top: -8px; margin-bottom: 24px; font-size: 0.85rem; color: var(--text-secondary);">
+        Active Workout Tracker
+      </div>
 
       <section class="card session-card" style="min-height: 400px; display: flex; flex-direction: column; justify-content: center;">
         
@@ -358,12 +361,10 @@
 
     <!-- PANEL 3: ANALYTICS & VISUALIZATIONS -->
     <div id="panel-analytics" class="tab-panel">
-      <header>
-        <div class="logo-section">
-          <h1>PROGRESO</h1>
-          <p>Training Analytics</p>
-        </div>
-      </header>
+      <!-- Sliding Subtitle -->
+      <div class="tab-subtitle" style="text-align: center; margin-top: -8px; margin-bottom: 24px; font-size: 0.85rem; color: var(--text-secondary);">
+        Training Analytics
+      </div>
  
       <!-- Chart Mode & Timeframe Filters -->
       <div class="analytics-filters" style="margin-bottom: 16px; display: flex; flex-direction: column; gap: 10px;">

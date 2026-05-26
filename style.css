@@ -121,6 +121,7 @@ header {
 .tabs-viewport {
   display: flex;
   width: 100%;
+  gap: 24px; /* Space between tab panels */
   transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
   will-change: transform;
 }
