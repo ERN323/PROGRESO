@@ -903,6 +903,88 @@ function setupEventListeners() {
       avgMuscleTrigger.classList.remove('open');
     }
   });
+
+  // Swipe navigation detection
+  let touchStartX = 0;
+  let touchStartY = 0;
+  let touchEndX = 0;
+  let touchEndY = 0;
+
+  const tabOrder = ['profile', 'workout', 'analytics'];
+
+  document.addEventListener('touchstart', (e) => {
+    // Disable swipe navigation if modal or catalogue drawer is open
+    const catalogueDrawer = document.getElementById('catalogue-drawer');
+    const hasActiveModal = document.querySelector('.modal-overlay.active');
+    if (hasActiveModal || (catalogueDrawer && catalogueDrawer.classList.contains('open'))) {
+      return;
+    }
+
+    const target = e.target;
+    if (target.closest('input[type="range"]') || 
+        target.closest('canvas') || 
+        target.closest('.custom-select-wrapper') || 
+        target.closest('.custom-options') ||
+        target.closest('.chart-container') ||
+        target.closest('#planned-list') ||
+        target.closest('.logs-table-container') ||
+        target.closest('.table-wrapper')) {
+      return;
+    }
+    touchStartX = e.changedTouches[0].screenX;
+    touchStartY = e.changedTouches[0].screenY;
+  }, { passive: true });
+
+  document.addEventListener('touchend', (e) => {
+    // Disable swipe navigation if modal or catalogue drawer is open
+    const catalogueDrawer = document.getElementById('catalogue-drawer');
+    const hasActiveModal = document.querySelector('.modal-overlay.active');
+    if (hasActiveModal || (catalogueDrawer && catalogueDrawer.classList.contains('open'))) {
+      return;
+    }
+
+    const target = e.target;
+    if (target.closest('input[type="range"]') || 
+        target.closest('canvas') || 
+        target.closest('.custom-select-wrapper') || 
+        target.closest('.custom-options') ||
+        target.closest('.chart-container') ||
+        target.closest('#planned-list') ||
+        target.closest('.logs-table-container') ||
+        target.closest('.table-wrapper')) {
+      return;
+    }
+    
+    touchEndX = e.changedTouches[0].screenX;
+    touchEndY = e.changedTouches[0].screenY;
+    
+    handleSwipeGesture();
+  }, { passive: true });
+
+  function handleSwipeGesture() {
+    const diffX = touchEndX - touchStartX;
+    const diffY = touchEndY - touchStartY;
+    
+    if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 75) {
+      const currentTabEl = document.querySelector('.nav-item.active');
+      if (!currentTabEl) return;
+      const currentTab = currentTabEl.dataset.tab;
+      const currentIndex = tabOrder.indexOf(currentTab);
+      if (currentIndex === -1) return;
+      
+      if (diffX < 0) {
+        // Swipe left (next tab)
+        if (currentIndex < tabOrder.length - 1) {
+          switchTab(tabOrder[currentIndex + 1]);
+        }
+      } else {
+        // Swipe right (previous tab)
+        if (currentIndex > 0) {
+          switchTab(tabOrder[currentIndex - 1]);
+        }
+      }
+    }
+  }
 }
 
 // Planner Screens Implementation
