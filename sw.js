@@ -1,4 +1,4 @@
-const CACHE_NAME = 'progreso-cache-v17';
+const CACHE_NAME = 'progreso-cache-v18';
 const ASSETS = [
   './',
   './index.html',
@@ -75,4 +75,11 @@ self.addEventListener('notificationclick', (e) => {
       }
     })
   );
+});
+
+// Handle update skipWaiting commands from parent PWA pages
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.action === 'skipWaiting') {
+    self.skipWaiting();
+  }
 });

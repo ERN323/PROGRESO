@@ -169,6 +169,10 @@ document.addEventListener('DOMContentLoaded', () => {
   updateDashboard();
   updateSeriesToggleButtons();
   
+  // Register service worker and persistence API
+  registerServiceWorker();
+  requestPersistentStorage();
+  
   // Set default tab to workout
   switchTab('workout');
 });
@@ -2963,6 +2967,103 @@ function showTimerFinishedNotification(exerciseName, nextSetText) {
         tag: 'rest-timer-notification',
         renotify: true
       });
+    });
+  }
+}
+
+// PWA Update Management and Storage Persistence Helpers
+function registerServiceWorker() {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').then((reg) => {
+      console.log('[PROGRESO] Service Worker registered:', reg.scope);
+      
+      // If there is an update already waiting, show the banner
+      if (reg.waiting) {
+        showUpdateBanner(reg.waiting);
+      }
+      
+      // Watch for future updates
+      reg.addEventListener('updatefound', () => {
+        const newWorker = reg.installing;
+        newWorker.addEventListener('statechange', () => {
+          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            showUpdateBanner(newWorker);
+          }
+        });
+      });
+    }).catch((err) => {
+      console.error('[PROGRESO] Service Worker registration failed:', err);
+    });
+    
+    // Page reload upon updating Service Worker
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!refreshing) {
+        refreshing = true;
+        window.location.reload();
+      }
+    });
+  }
+}
+
+function showUpdateBanner(worker) {
+  if (document.getElementById('update-banner')) return;
+  
+  const banner = document.createElement('div');
+  banner.id = 'update-banner';
+  banner.style.cssText = `
+    position: fixed;
+    top: -100px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: calc(100% - 40px);
+    max-width: 440px;
+    background: rgba(25, 27, 38, 0.95);
+    border: 1px solid var(--accent-color);
+    box-shadow: 0 0 20px var(--accent-glow);
+    border-radius: 16px;
+    padding: 14px 18px;
+    z-index: 9999;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    transition: top 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  `;
+  
+  banner.innerHTML = `
+    <div style="flex: 1; padding-right: 12px; text-align: left;">
+      <h4 style="margin: 0; font-size: 0.95rem; font-weight: 800; color: #ffffff;">Update Available! ⚡</h4>
+      <p style="margin: 3px 0 0 0; font-size: 0.8rem; color: var(--text-secondary);">PROGRESO has a new version ready to apply.</p>
+    </div>
+    <button class="btn btn-primary" style="padding: 8px 16px; font-size: 0.85rem; border-radius: 10px; font-weight: 700; white-space: nowrap; cursor: pointer;">
+      Reload
+    </button>
+  `;
+  
+  const button = banner.querySelector('button');
+  button.addEventListener('click', () => {
+    worker.postMessage({ action: 'skipWaiting' });
+  });
+  
+  document.body.appendChild(banner);
+  
+  setTimeout(() => {
+    banner.style.top = '20px';
+  }, 100);
+}
+
+function requestPersistentStorage() {
+  if (navigator.storage && navigator.storage.persist) {
+    navigator.storage.persist().then((persisted) => {
+      if (persisted) {
+        console.log('[PROGRESO] Storage persistence granted. Data is safe from eviction.');
+      } else {
+        console.warn('[PROGRESO] Storage persistence request was denied by the platform.');
+      }
+    }).catch((err) => {
+      console.error('[PROGRESO] Failed to request storage persistence:', err);
     });
   }
 }
