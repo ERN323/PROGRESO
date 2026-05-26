@@ -1,4 +1,4 @@
-const CACHE_NAME = 'progreso-cache-v15';
+const CACHE_NAME = 'progreso-cache-v16';
 const ASSETS = [
   './',
   './index.html',
@@ -56,6 +56,23 @@ self.addEventListener('fetch', (e) => {
         }
         return response;
       });
+    })
+  );
+});
+
+// Focus active window when clicking push notification
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  e.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if ('focus' in client) {
+          return client.focus();
+        }
+      }
+      if (self.clients.openWindow) {
+        return self.clients.openWindow('./');
+      }
     })
   );
 });

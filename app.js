@@ -34,6 +34,8 @@ let activeChartMode = 'exercise'; // 'exercise' or 'muscle'
 let activePresetBuilderCategory = 'Legs';
 let activeAvgMuscleGroup = 'Back';
 let activeAvgTimeframe = 'last';
+let activeKeypadInput = null;
+let restAudio = null;
 
 const DEFAULT_CATALOGUE = {
   Legs: [
@@ -158,6 +160,7 @@ const screens = {
 
 // Initialize Application
 document.addEventListener('DOMContentLoaded', () => {
+  restAudio = document.getElementById('rest-timer-audio');
   loadTheme();
   loadLogsFromStorage();
   loadCustomData();
@@ -466,7 +469,11 @@ function transitionTo(state) {
   if (target) {
     target.classList.add('active');
     if (state === AppState.WAIT_REPS) {
-      document.getElementById('set-reps-input').focus();
+      const weightInput = document.getElementById('set-weight-input');
+      if (weightInput) {
+        weightInput.focus();
+        activeKeypadInput = weightInput;
+      }
     }
   }
 }
@@ -691,6 +698,7 @@ function setupEventListeners() {
 
   // Welcome Screen actions
   document.getElementById('start-session-btn').addEventListener('click', () => {
+    requestNotificationPermission();
     activeSession.date = getTodayDateString();
     activeSession.exercises = [];
     renderPlannedExercisesList();
@@ -714,6 +722,7 @@ function setupEventListeners() {
     transitionTo(AppState.PLAN_EXERCISES);
   });
   document.getElementById('start-workout-btn').addEventListener('click', () => {
+    requestNotificationPermission();
     const restInput = document.getElementById('planned-rest-seconds');
     activeSession.restTime = parseInt(restInput.value) || 60;
     activeSession.currentExerciseIndex = 0;
@@ -835,7 +844,10 @@ function setupEventListeners() {
   if (repeatsSelect) repeatsSelect.addEventListener('change', saveSoundSettings);
   if (volSlider) volSlider.addEventListener('input', saveSoundSettings);
   if (durSlider) durSlider.addEventListener('input', saveSoundSettings);
-  if (testSoundBtn) testSoundBtn.addEventListener('click', () => playNotificationSound());
+  if (testSoundBtn) testSoundBtn.addEventListener('click', () => {
+    requestNotificationPermission();
+    playNotificationSound();
+  });
 
   // Average Weight Muscle Group Dropdown Toggle
   const avgMuscleTrigger = document.getElementById('avg-muscle-select-trigger');
@@ -914,13 +926,15 @@ function setupEventListeners() {
     }
   });
 
-  // Swipe navigation detection (finger-following)
+  // Swipe navigation detection (finger-following with direction locking)
   let touchStartX = 0;
   let touchStartY = 0;
   let currentTranslateX = 0;
   let isDragging = false;
   let containerWidth = 0;
   let initialTranslateX = 0;
+  let gestureChecked = false;
+  let isSwipeLock = false;
 
   const tabOrder = ['profile', 'workout', 'analytics'];
   const viewport = document.getElementById('tabs-viewport');
@@ -941,7 +955,8 @@ function setupEventListeners() {
         target.closest('.chart-container') ||
         target.closest('#planned-list') ||
         target.closest('.logs-table-container') ||
-        target.closest('.table-wrapper')) {
+        target.closest('.table-wrapper') ||
+        target.closest('.custom-keypad')) {
       return;
     }
 
@@ -951,7 +966,9 @@ function setupEventListeners() {
     const currentIndex = tabOrder.indexOf(currentTab);
     if (currentIndex === -1) return;
 
-    isDragging = true;
+    isDragging = false;
+    gestureChecked = false;
+    isSwipeLock = false;
     
     // Get actual width of container
     const container = document.querySelector('.container');
@@ -962,14 +979,11 @@ function setupEventListeners() {
 
     touchStartX = e.touches[0].clientX;
     touchStartY = e.touches[0].clientY;
-
-    if (viewport) {
-      viewport.style.transition = 'none'; // Disable animations for real-time thumb tracking
-    }
   }, { passive: true });
 
   document.addEventListener('touchmove', (e) => {
-    if (!isDragging || !viewport) return;
+    if (gestureChecked && !isSwipeLock) return;
+    if (!viewport) return;
 
     const touchX = e.touches[0].clientX;
     const touchY = e.touches[0].clientY;
@@ -977,7 +991,30 @@ function setupEventListeners() {
     const diffX = touchX - touchStartX;
     const diffY = touchY - touchStartY;
 
-    if (Math.abs(diffX) > Math.abs(diffY)) {
+    if (!gestureChecked) {
+      const distX = Math.abs(diffX);
+      const distY = Math.abs(diffY);
+      
+      // 8px threshold to lock swipe vs scroll direction
+      if (distX > 8 || distY > 8) {
+        gestureChecked = true;
+        if (distX > distY) {
+          isSwipeLock = true;
+          isDragging = true;
+          viewport.style.transition = 'none';
+        } else {
+          isSwipeLock = false;
+          isDragging = false;
+        }
+      }
+      return;
+    }
+
+    if (isSwipeLock && isDragging) {
+      if (e.cancelable) {
+        e.preventDefault();
+      }
+
       let targetTranslate = initialTranslateX + diffX;
 
       // Add elastic boundaries resistance
@@ -991,37 +1028,99 @@ function setupEventListeners() {
       currentTranslateX = targetTranslate;
       viewport.style.transform = `translateX(${currentTranslateX}px)`;
     }
-  }, { passive: true });
+  }, { passive: false });
 
   document.addEventListener('touchend', (e) => {
-    if (!isDragging || !viewport) return;
-    isDragging = false;
+    if (isSwipeLock && isDragging && viewport) {
+      viewport.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)';
 
-    // Restore smooth easing transitions
-    viewport.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)';
+      const currentTabEl = document.querySelector('.nav-item.active');
+      if (currentTabEl) {
+        const currentTab = currentTabEl.dataset.tab;
+        const currentIndex = tabOrder.indexOf(currentTab);
 
-    const currentTabEl = document.querySelector('.nav-item.active');
-    if (!currentTabEl) return;
-    const currentTab = currentTabEl.dataset.tab;
-    const currentIndex = tabOrder.indexOf(currentTab);
+        const diffX = e.changedTouches[0].clientX - touchStartX;
+        const threshold = containerWidth * 0.25;
 
-    const diffX = e.changedTouches[0].clientX - touchStartX;
-    const threshold = containerWidth * 0.25; // 25% width swipe threshold
+        let targetIndex = currentIndex;
 
-    let targetIndex = currentIndex;
+        if (diffX < -threshold) {
+          if (currentIndex < tabOrder.length - 1) {
+            targetIndex = currentIndex + 1;
+          }
+        } else if (diffX > threshold) {
+          if (currentIndex > 0) {
+            targetIndex = currentIndex - 1;
+          }
+        }
 
-    if (diffX < -threshold) {
-      if (currentIndex < tabOrder.length - 1) {
-        targetIndex = currentIndex + 1;
-      }
-    } else if (diffX > threshold) {
-      if (currentIndex > 0) {
-        targetIndex = currentIndex - 1;
+        switchTab(tabOrder[targetIndex]);
       }
     }
 
-    switchTab(tabOrder[targetIndex]);
+    isDragging = false;
+    gestureChecked = false;
+    isSwipeLock = false;
   }, { passive: true });
+
+  // Custom keypads and input focus controllers
+  const weightInput = document.getElementById('set-weight-input');
+  const repsInput = document.getElementById('set-reps-input');
+
+  if (weightInput && repsInput) {
+    weightInput.addEventListener('focus', () => {
+      activeKeypadInput = weightInput;
+    });
+    repsInput.addEventListener('focus', () => {
+      activeKeypadInput = repsInput;
+    });
+    weightInput.addEventListener('click', () => {
+      activeKeypadInput = weightInput;
+    });
+    repsInput.addEventListener('click', () => {
+      activeKeypadInput = repsInput;
+    });
+  }
+
+  const keypad = document.getElementById('custom-workout-keypad');
+  if (keypad) {
+    keypad.addEventListener('mousedown', (e) => {
+      const btn = e.target.closest('.keypad-btn');
+      if (btn) {
+        e.preventDefault(); // Prevents input focus loss
+      }
+    });
+
+    keypad.addEventListener('click', (e) => {
+      const btn = e.target.closest('.keypad-btn');
+      if (!btn) return;
+      
+      const key = btn.dataset.key;
+      if (!activeKeypadInput) {
+        activeKeypadInput = document.getElementById('set-weight-input') || weightInput;
+      }
+      if (!activeKeypadInput) return;
+      
+      let val = activeKeypadInput.value;
+      
+      if (key === 'backspace') {
+        activeKeypadInput.value = val.slice(0, -1);
+      } else if (key === '.') {
+        if (activeKeypadInput.id === 'set-weight-input' && !val.includes('.')) {
+          activeKeypadInput.value = val + '.';
+        }
+      } else if (key === '/') {
+        if (activeKeypadInput.id === 'set-reps-input' && !val.includes('/')) {
+          activeKeypadInput.value = val + '/';
+        }
+      } else {
+        activeKeypadInput.value = val + key;
+      }
+      
+      activeKeypadInput.dispatchEvent(new Event('input'));
+      activeKeypadInput.focus();
+    });
+  }
 }
 
 // Planner Screens Implementation
@@ -1153,11 +1252,13 @@ function startRestTimer(isLastSetOfExercise) {
   document.getElementById('timer-ex-name').textContent = currentEx.name;
   
   const subtext = document.getElementById('timer-next-set');
+  let nextSetText = '';
   if (isLastSetOfExercise) {
-    subtext.textContent = `Up Next: ${nextEx.name} (Set 1 of ${nextEx.plannedSets})`;
+    nextSetText = `Up Next: ${nextEx.name} (Set 1 of ${nextEx.plannedSets})`;
   } else {
-    subtext.textContent = `Up Next: Set ${activeSession.currentSetIndex + 2} of ${currentEx.plannedSets}`;
+    nextSetText = `Up Next: Set ${activeSession.currentSetIndex + 2} of ${currentEx.plannedSets}`;
   }
+  subtext.textContent = nextSetText;
   
   let timeLeft = activeSession.restTime;
   const countdownText = document.getElementById('timer-countdown');
@@ -1165,21 +1266,83 @@ function startRestTimer(isLastSetOfExercise) {
   
   countdownText.textContent = formatTime(timeLeft);
   progressRing.style.strokeDashoffset = 0;
-  
+
+  // 1. Play silent audio of the exact rest duration to keep background thread active
+  if (restAudio) {
+    try {
+      restAudio.pause();
+      const silentUri = createSilenceWavDataUri(activeSession.restTime);
+      restAudio.src = silentUri;
+      restAudio.play().catch(err => console.log('Audio autoplay blocked or failed:', err));
+      
+      // When audio finishes naturally (meaning rest duration is completed)
+      restAudio.onended = () => {
+        playBeep();
+        showTimerFinishedNotification(
+          isLastSetOfExercise ? nextEx.name : currentEx.name,
+          isLastSetOfExercise ? `Set 1 of ${nextEx.plannedSets}` : `Set ${activeSession.currentSetIndex + 2} of ${currentEx.plannedSets}`
+        );
+        advanceSession(isLastSetOfExercise);
+      };
+    } catch (e) {
+      console.warn('Background silent audio setup failed:', e);
+    }
+  }
+
+  // 2. Setup Media Session metadata and actions (so user can view and skip rest timer from lock screen!)
+  const updateMediaSession = (remaining) => {
+    if ('mediaSession' in navigator && restAudio) {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: `Rest: ${remaining}s remaining`,
+        artist: currentEx.name,
+        album: 'PROGRESO Workout Tracker',
+        artwork: [
+          { src: 'icon.svg', sizes: '512x512', type: 'image/svg+xml' }
+        ]
+      });
+      
+      navigator.mediaSession.setActionHandler('nexttrack', () => {
+        skipRestTimer();
+      });
+      navigator.mediaSession.setActionHandler('pause', () => {
+        skipRestTimer();
+      });
+    }
+  };
+
+  updateMediaSession(timeLeft);
+
+  // 3. Setup visual UI timer ticks
   clearInterval(activeSession.timerInterval);
   activeSession.timerInterval = setInterval(() => {
     timeLeft--;
+    
+    // Safety check: if audio ended or timer reached zero
+    if (timeLeft <= 0) {
+      clearInterval(activeSession.timerInterval);
+      countdownText.textContent = formatTime(0);
+      progressRing.style.strokeDashoffset = 502;
+      
+      if (restAudio && !restAudio.paused) {
+        restAudio.pause();
+        playBeep();
+        showTimerFinishedNotification(
+          isLastSetOfExercise ? nextEx.name : currentEx.name,
+          isLastSetOfExercise ? `Set 1 of ${nextEx.plannedSets}` : `Set ${activeSession.currentSetIndex + 2} of ${currentEx.plannedSets}`
+        );
+        advanceSession(isLastSetOfExercise);
+      }
+      return;
+    }
+
     countdownText.textContent = formatTime(timeLeft);
     
     // Circular progress animation (perimeter=502)
     const progressFraction = timeLeft / activeSession.restTime;
     progressRing.style.strokeDashoffset = 502 - (502 * progressFraction);
     
-    if (timeLeft <= 0) {
-      clearInterval(activeSession.timerInterval);
-      playBeep();
-      advanceSession(isLastSetOfExercise);
-    }
+    // Update lock screen metadata title
+    updateMediaSession(timeLeft);
   }, 1000);
 }
 
@@ -1192,12 +1355,23 @@ function formatTime(sec) {
 // Skip timer button
 function skipRestTimer() {
   clearInterval(activeSession.timerInterval);
+  if (restAudio) {
+    restAudio.pause();
+    restAudio.onended = null;
+  }
+  
+  if ('mediaSession' in navigator) {
+    navigator.mediaSession.setActionHandler('nexttrack', null);
+    navigator.mediaSession.setActionHandler('pause', null);
+  }
+
   const currentEx = activeSession.exercises[activeSession.currentExerciseIndex];
   const isLastSet = activeSession.currentSetIndex === currentEx.plannedSets - 1;
   advanceSession(isLastSet);
 }
 
 function advanceSession(isLastSetOfExercise) {
+  clearInterval(activeSession.timerInterval);
   if (isLastSetOfExercise) {
     activeSession.currentExerciseIndex++;
     activeSession.currentSetIndex = 0;
@@ -2067,6 +2241,7 @@ function renderPresetsOnWelcome() {
 
 // Load a preset's exercises into the active session planner
 function loadPresetIntoSession(preset) {
+  requestNotificationPermission();
   activeSession.date = getTodayDateString();
   
   // Clone exercises from preset
@@ -2771,7 +2946,85 @@ function renderAverageWeights() {
       <span class="avg-weight-name">${ex.name}</span>
       <span class="avg-weight-value-badge">${displayValue}</span>
     `;
-    container.appendChild(item);
   });
+}
+
+// Background rest timer helper functions
+function createSilenceWavDataUri(durationSeconds) {
+  const sampleRate = 8000;
+  const numChannels = 1;
+  const bitsPerSample = 8;
+  const blockAlign = numChannels * (bitsPerSample / 8);
+  const byteRate = sampleRate * blockAlign;
+  const dataSize = Math.ceil(durationSeconds * byteRate);
+  const chunkSize = 36 + dataSize;
+  
+  const buffer = new ArrayBuffer(44 + dataSize);
+  const view = new DataView(buffer);
+  
+  /* RIFF identifier */
+  view.setUint32(0, 0x52494646, false); // "RIFF"
+  /* file length */
+  view.setUint32(4, chunkSize, true);
+  /* RIFF type */
+  view.setUint32(8, 0x57415645, false); // "WAVE"
+  
+  /* format chunk identifier */
+  view.setUint32(12, 0x666d7420, false); // "fmt "
+  /* format chunk length */
+  view.setUint32(16, 16, true);
+  /* sample format (raw) */
+  view.setUint16(20, 1, true);
+  /* channel count */
+  view.setUint16(22, numChannels, true);
+  /* sample rate */
+  view.setUint32(24, sampleRate, true);
+  /* byte rate (sample rate * block align) */
+  view.setUint32(28, byteRate, true);
+  /* block align (channel count * bytes per sample) */
+  view.setUint16(32, blockAlign, true);
+  /* bits per sample */
+  view.setUint16(34, bitsPerSample, true);
+  
+  /* data chunk identifier */
+  view.setUint32(36, 0x64617461, false); // "data"
+  /* data chunk length */
+  view.setUint32(40, dataSize, true);
+  
+  // Write silence (for 8-bit unsigned PCM, silence is 128)
+  const uint8View = new Uint8Array(buffer, 44, dataSize);
+  uint8View.fill(128);
+  
+  // Convert to base64
+  let binary = '';
+  const bytes = new Uint8Array(buffer);
+  const len = bytes.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return 'data:audio/wav;base64,' + btoa(binary);
+}
+
+function requestNotificationPermission() {
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission().then(permission => {
+      console.log('Notification permission status:', permission);
+    });
+  }
+}
+
+function showTimerFinishedNotification(exerciseName, nextSetText) {
+  if ('Notification' in window && Notification.permission === 'granted') {
+    navigator.serviceWorker.ready.then(registration => {
+      registration.showNotification('Rest Finished! 🏋️', {
+        body: `Time to start: ${exerciseName} (${nextSetText})`,
+        icon: 'icon.svg',
+        vibrate: [200, 100, 200],
+        badge: 'icon.svg',
+        tag: 'rest-timer-notification',
+        renotify: true
+      });
+    });
+  }
 }
 
