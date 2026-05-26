@@ -34,7 +34,6 @@ let activeChartMode = 'exercise'; // 'exercise' or 'muscle'
 let activePresetBuilderCategory = 'Legs';
 let activeAvgMuscleGroup = 'Back';
 let activeAvgTimeframe = 'last';
-let activeKeypadInput = null;
 let restAudio = null;
 
 const DEFAULT_CATALOGUE = {
@@ -472,7 +471,6 @@ function transitionTo(state) {
       const weightInput = document.getElementById('set-weight-input');
       if (weightInput) {
         weightInput.focus();
-        activeKeypadInput = weightInput;
       }
     }
   }
@@ -1062,65 +1060,6 @@ function setupEventListeners() {
     gestureChecked = false;
     isSwipeLock = false;
   }, { passive: true });
-
-  // Custom keypads and input focus controllers
-  const weightInput = document.getElementById('set-weight-input');
-  const repsInput = document.getElementById('set-reps-input');
-
-  if (weightInput && repsInput) {
-    weightInput.addEventListener('focus', () => {
-      activeKeypadInput = weightInput;
-    });
-    repsInput.addEventListener('focus', () => {
-      activeKeypadInput = repsInput;
-    });
-    weightInput.addEventListener('click', () => {
-      activeKeypadInput = weightInput;
-    });
-    repsInput.addEventListener('click', () => {
-      activeKeypadInput = repsInput;
-    });
-  }
-
-  const keypad = document.getElementById('custom-workout-keypad');
-  if (keypad) {
-    keypad.addEventListener('mousedown', (e) => {
-      const btn = e.target.closest('.keypad-btn');
-      if (btn) {
-        e.preventDefault(); // Prevents input focus loss
-      }
-    });
-
-    keypad.addEventListener('click', (e) => {
-      const btn = e.target.closest('.keypad-btn');
-      if (!btn) return;
-      
-      const key = btn.dataset.key;
-      if (!activeKeypadInput) {
-        activeKeypadInput = document.getElementById('set-weight-input') || weightInput;
-      }
-      if (!activeKeypadInput) return;
-      
-      let val = activeKeypadInput.value;
-      
-      if (key === 'backspace') {
-        activeKeypadInput.value = val.slice(0, -1);
-      } else if (key === '.') {
-        if (activeKeypadInput.id === 'set-weight-input' && !val.includes('.')) {
-          activeKeypadInput.value = val + '.';
-        }
-      } else if (key === '/') {
-        if (activeKeypadInput.id === 'set-reps-input' && !val.includes('/')) {
-          activeKeypadInput.value = val + '/';
-        }
-      } else {
-        activeKeypadInput.value = val + key;
-      }
-      
-      activeKeypadInput.dispatchEvent(new Event('input'));
-      activeKeypadInput.focus();
-    });
-  }
 }
 
 // Planner Screens Implementation
