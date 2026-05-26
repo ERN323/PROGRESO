@@ -188,9 +188,22 @@ function getTodayDateString() {
 
 // Bottom Navigation Tab Selector
 function switchTab(tabName) {
-  // Hide all tab panels and clear navigation item states
+  // Determine direction for slide transition
+  const currentActiveTabEl = document.querySelector('.nav-item.active');
+  let direction = '';
+  if (currentActiveTabEl) {
+    const currentTab = currentActiveTabEl.dataset.tab;
+    const tabOrder = ['profile', 'workout', 'analytics'];
+    const currentIndex = tabOrder.indexOf(currentTab);
+    const targetIndex = tabOrder.indexOf(tabName);
+    if (currentIndex !== -1 && targetIndex !== -1 && currentIndex !== targetIndex) {
+      direction = targetIndex > currentIndex ? 'right' : 'left';
+    }
+  }
+
+  // Hide all tab panels and clear navigation item states, removing previous transition classes
   document.querySelectorAll('.tab-panel').forEach(panel => {
-    panel.classList.remove('active');
+    panel.classList.remove('active', 'slide-from-left', 'slide-from-right');
   });
   document.querySelectorAll('.nav-item').forEach(item => {
     item.classList.remove('active');
@@ -200,6 +213,11 @@ function switchTab(tabName) {
   const targetPanel = document.getElementById(`panel-${tabName}`);
   if (targetPanel) {
     targetPanel.classList.add('active');
+    if (direction === 'left') {
+      targetPanel.classList.add('slide-from-left');
+    } else if (direction === 'right') {
+      targetPanel.classList.add('slide-from-right');
+    }
   }
   
   const targetTab = document.querySelector(`.nav-item[data-tab="${tabName}"]`);
