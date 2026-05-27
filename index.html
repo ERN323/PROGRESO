@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PROGRESO // Premium Workout Tracker & Visualizer</title>
-  <link rel="stylesheet" href="style.css?v=29">
+  <link rel="stylesheet" href="style.css?v=30">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <meta name="theme-color" content="#bd00ff">
@@ -216,17 +216,17 @@
     <!-- PANEL 2: WORKOUT SESSION TRACKER (Default Tab) -->
     <div id="panel-workout" class="tab-panel active">
       <!-- Sliding Subtitle -->
-      <div class="tab-subtitle" style="text-align: center; margin-top: -8px; margin-bottom: 24px; font-size: 0.85rem; color: var(--text-secondary);">
+      <div class="tab-subtitle" style="text-align: center; margin-top: -8px; margin-bottom: 16px; font-size: 0.85rem; color: var(--text-secondary);">
         Active Workout Tracker
       </div>
 
-      <section class="card session-card" style="min-height: 400px; display: flex; flex-direction: column; justify-content: center;">
+      <section class="card session-card" style="display: flex; flex-direction: column; justify-content: center;">
         
         <!-- STATE 1: WELCOME SCREEN -->
         <div id="screen-welcome" class="state-screen active">
-          <div class="welcome-display" style="padding: 24px 10px; display: flex; flex-direction: column; align-items: center; justify-content: space-evenly; min-height: 410px; box-sizing: border-box; height: 100%;">
-            <div class="date-badge" id="welcome-date">25.05.2026</div>
-            <h2 style="margin-top: 5px; margin-bottom: 5px;">Ready to train?</h2>
+          <div class="welcome-display" style="padding: 12px 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; box-sizing: border-box;">
+            <div class="date-badge" id="welcome-date" style="margin-bottom: 0;">25.05.2026</div>
+            <h2 style="margin-top: 0; margin-bottom: 0;">Ready to train?</h2>
             
             <button class="btn-start-session-circle" id="start-session-circle-btn">
               <span>Start<br>Session</span>
