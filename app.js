@@ -179,7 +179,7 @@ document.addEventListener('DOMContentLoaded', () => {
   requestPersistentStorage();
   
   // Initialize Google Auth Sync if library is already loaded
-  if (typeof google !== 'undefined' && google.accounts) {
+  if (window.googleLibLoaded || (typeof google !== 'undefined' && google.accounts)) {
     initGoogleAuthSync();
   }
   
@@ -3147,6 +3147,10 @@ function initGoogleAuthSync() {
 
   // Initialize GIS client token mechanism
   try {
+    if (typeof google === 'undefined' || !google.accounts || !google.accounts.oauth2) {
+      throw new Error("Google Identity Services script is not fully loaded or initialized. Please wait a moment and try refreshing.");
+    }
+
     googleTokenClient = google.accounts.oauth2.initTokenClient({
       client_id: activeClientId,
       scope: 'https://www.googleapis.com/auth/drive.appdata openid profile email',
@@ -3156,6 +3160,7 @@ function initGoogleAuthSync() {
             console.log('[PROGRESO] Silent sign-in required interaction.');
           } else {
             console.error('[PROGRESO] Google Auth callback error:', tokenResponse);
+            alert('Google Sign-In Error: ' + (tokenResponse.error_description || tokenResponse.error));
           }
           localStorage.removeItem('progreso-google-signed-in');
           showLoggedOutSyncUI();
@@ -3181,7 +3186,15 @@ function initGoogleAuthSync() {
       loginBtn.onclick = () => {
         if (googleTokenClient) {
           updateGoogleSyncStatus('Connecting to Google...');
-          googleTokenClient.requestAccessToken({ prompt: 'consent' });
+          try {
+            googleTokenClient.requestAccessToken({ prompt: 'consent' });
+          } catch (err) {
+            console.error('[PROGRESO] requestAccessToken failed:', err);
+            alert('Sign-In request failed (check popup settings): ' + err.message);
+            updateGoogleSyncStatus('Request blocked or failed.');
+          }
+        } else {
+          alert('Google Auth Client not initialized. Please verify your Client ID.');
         }
       };
     }

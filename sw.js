@@ -1,4 +1,4 @@
-const CACHE_NAME = 'progreso-cache-v20';
+const CACHE_NAME = 'progreso-cache-v21';
 const ASSETS = [
   './',
   './index.html',
