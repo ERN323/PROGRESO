@@ -2292,7 +2292,7 @@ window.openPresetBuilder = function(presetIndex = null) {
   
   // Clear inputs
   document.getElementById('preset-exercise-search').value = '';
-  document.getElementById('preset-builder-sets-input').value = '4';
+  document.getElementById('preset-builder-sets-input').value = '';
   
   if (presetIndex === null) {
     titleEl.textContent = 'Create Workout Preset';

@@ -130,15 +130,18 @@ header {
   flex: 0 0 100%;
   width: 100%;
   box-sizing: border-box;
-  display: none;
+  height: 0;
+  overflow: hidden;
 }
 
 .tab-panel.active {
-  display: block;
+  height: auto;
+  overflow: visible;
 }
 
 #tabs-viewport.transitioning .tab-panel {
-  display: block !important;
+  height: auto !important;
+  overflow: visible !important;
 }
 
 /* Theme Controller */
@@ -1530,4 +1533,19 @@ body.theme-white .btn-start-session-circle:hover span {
   border-color: var(--accent-color) !important;
   box-shadow: 0 0 15px var(--accent-glow) !important;
   transform: scale(0.97);
+}
+
+/* Styling for target sets input fields with a neon theme glow and faint placeholder */
+input[type="number"]#plan-ex-sets,
+input[type="number"]#preset-builder-sets-input {
+  border-color: var(--accent-glow) !important;
+  box-shadow: 0 0 8px var(--accent-bg-glow) !important;
+  text-align: center;
+}
+
+input[type="number"]#plan-ex-sets::placeholder,
+input[type="number"]#preset-builder-sets-input::placeholder {
+  color: rgba(255, 255, 255, 0.25) !important;
+  text-shadow: 0 0 4px var(--accent-glow);
+  opacity: 0.6;
 }
