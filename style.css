@@ -124,24 +124,29 @@ header {
   gap: 24px; /* Space between tab panels */
   transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
   will-change: transform;
+  align-items: flex-start; /* Align panels to start to allow independent heights */
 }
 
 .tab-panel {
   flex: 0 0 100%;
   width: 100%;
   box-sizing: border-box;
-  height: 0;
+  max-height: 0;
   overflow: hidden;
+  opacity: 0;
+  transition: opacity 0.15s ease-in-out;
 }
 
 .tab-panel.active {
-  height: auto;
+  max-height: none;
   overflow: visible;
+  opacity: 1;
 }
 
 #tabs-viewport.transitioning .tab-panel {
-  height: auto !important;
+  max-height: none !important;
   overflow: visible !important;
+  opacity: 1 !important;
 }
 
 /* Theme Controller */
