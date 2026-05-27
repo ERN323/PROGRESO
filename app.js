@@ -13,6 +13,7 @@ let soundSettings = {
 const GOOGLE_CLIENT_ID = '1093893260047-pougu1r4t60k5v6bvsgsf9b9neklutgj.apps.googleusercontent.com';
 let googleTokenClient = null;
 let googleAccessToken = null;
+let pendingSyncAction = null; // 'backup', 'restore', or null
 
 // Interactive chart filter states
 let activeChartTimeframe = 'all'; // '7d', '30d', 'all'
@@ -3112,6 +3113,12 @@ function requestPersistentStorage() {
   }
 }
 
+function isGoogleTokenValid() {
+  if (!googleAccessToken) return false;
+  const expiration = parseInt(localStorage.getItem('progreso-google-token-expiration')) || 0;
+  return Date.now() < expiration;
+}
+
 // Google Cloud Backup & Sync Integration
 function initGoogleAuthSync() {
   const saveBtn = document.getElementById('save-client-id-btn');
@@ -3163,19 +3170,40 @@ function initGoogleAuthSync() {
             alert('Google Sign-In Error: ' + (tokenResponse.error_description || tokenResponse.error));
           }
           localStorage.removeItem('progreso-google-signed-in');
+          localStorage.removeItem('progreso-google-access-token');
+          localStorage.removeItem('progreso-google-token-expiration');
           showLoggedOutSyncUI();
+          pendingSyncAction = null;
           return;
         }
         
         googleAccessToken = tokenResponse.access_token;
+        const expiresInSeconds = parseInt(tokenResponse.expires_in) || 3600;
+        const expirationTime = Date.now() + (expiresInSeconds * 1000) - 60000;
+        localStorage.setItem('progreso-google-access-token', googleAccessToken);
+        localStorage.setItem('progreso-google-token-expiration', expirationTime);
         localStorage.setItem('progreso-google-signed-in', 'true');
         
         updateGoogleSyncStatus('Fetching user profile...');
         const profileLoaded = await loadGoogleUserProfile();
         if (profileLoaded) {
           updateGoogleSyncStatus('Signed in. Ready to sync.');
+          if (pendingSyncAction === 'backup') {
+            pendingSyncAction = null;
+            backupDataToDrive().catch(err => {
+              console.error(err);
+              updateGoogleSyncStatus('Backup process encountered an error.');
+            });
+          } else if (pendingSyncAction === 'restore') {
+            pendingSyncAction = null;
+            restoreDataFromDrive().catch(err => {
+              console.error(err);
+              updateGoogleSyncStatus('Restore process encountered an error.');
+            });
+          }
         } else {
           updateGoogleSyncStatus('Signed in (Profile load failed).');
+          pendingSyncAction = null;
         }
       }
     });
@@ -3187,7 +3215,10 @@ function initGoogleAuthSync() {
         if (googleTokenClient) {
           updateGoogleSyncStatus('Connecting to Google...');
           try {
-            googleTokenClient.requestAccessToken({ prompt: 'consent' });
+            const savedEmail = localStorage.getItem('progreso-google-user-email');
+            googleTokenClient.requestAccessToken({
+              login_hint: savedEmail || undefined
+            });
           } catch (err) {
             console.error('[PROGRESO] requestAccessToken failed:', err);
             alert('Sign-In request failed (check popup settings): ' + err.message);
@@ -3207,26 +3238,68 @@ function initGoogleAuthSync() {
     const backupBtn = document.getElementById('google-backup-btn');
     if (backupBtn) {
       backupBtn.onclick = () => {
-        backupDataToDrive().catch(err => {
-          console.error(err);
-          updateGoogleSyncStatus('Backup process encountered an error.');
-        });
+        if (isGoogleTokenValid()) {
+          backupDataToDrive().catch(err => {
+            console.error(err);
+            updateGoogleSyncStatus('Backup process encountered an error.');
+          });
+        } else {
+          pendingSyncAction = 'backup';
+          updateGoogleSyncStatus('Refreshing connection...');
+          try {
+            const savedEmail = localStorage.getItem('progreso-google-user-email');
+            googleTokenClient.requestAccessToken({
+              login_hint: savedEmail || undefined
+            });
+          } catch (err) {
+            console.error('[PROGRESO] requestAccessToken failed:', err);
+            alert('Re-authentication request failed: ' + err.message);
+            updateGoogleSyncStatus('Connection refresh failed.');
+          }
+        }
       };
     }
 
     const restoreBtn = document.getElementById('google-restore-btn');
     if (restoreBtn) {
       restoreBtn.onclick = () => {
-        restoreDataFromDrive().catch(err => {
-          console.error(err);
-          updateGoogleSyncStatus('Restore process encountered an error.');
-        });
+        if (isGoogleTokenValid()) {
+          restoreDataFromDrive().catch(err => {
+            console.error(err);
+            updateGoogleSyncStatus('Restore process encountered an error.');
+          });
+        } else {
+          pendingSyncAction = 'restore';
+          updateGoogleSyncStatus('Refreshing connection...');
+          try {
+            const savedEmail = localStorage.getItem('progreso-google-user-email');
+            googleTokenClient.requestAccessToken({
+              login_hint: savedEmail || undefined
+            });
+          } catch (err) {
+            console.error('[PROGRESO] requestAccessToken failed:', err);
+            alert('Re-authentication request failed: ' + err.message);
+            updateGoogleSyncStatus('Connection refresh failed.');
+          }
+        }
       };
     }
 
-    // Auto sign-in silently if previously connected
-    if (localStorage.getItem('progreso-google-signed-in') === 'true') {
-      googleTokenClient.requestAccessToken({ prompt: '' });
+    // Auto sign-in silently or use valid cached token
+    const savedToken = localStorage.getItem('progreso-google-access-token');
+    const expiration = parseInt(localStorage.getItem('progreso-google-token-expiration')) || 0;
+    const savedEmail = localStorage.getItem('progreso-google-user-email');
+
+    if (savedToken && Date.now() < expiration) {
+      googleAccessToken = savedToken;
+      showCachedUserProfile();
+      updateGoogleSyncStatus('Signed in. Ready to sync.');
+      loadGoogleUserProfile().catch(() => {});
+    } else if (localStorage.getItem('progreso-google-signed-in') === 'true') {
+      // Show cached user profile, don't request token automatically on load to avoid popup blockers.
+      // Connection will be refreshed seamlessly when the user clicks Backup or Restore.
+      showCachedUserProfile();
+      updateGoogleSyncStatus('Signed in. Ready to sync.');
     }
   } catch (e) {
     console.error('[PROGRESO] Failed to initialize Google Client:', e);
@@ -3254,6 +3327,11 @@ async function loadGoogleUserProfile() {
     });
     if (res.ok) {
       const profile = await res.json();
+      
+      // Cache details in local storage
+      localStorage.setItem('progreso-google-user-email', profile.email || '');
+      localStorage.setItem('progreso-google-user-name', profile.name || '');
+      localStorage.setItem('progreso-google-user-picture', profile.picture || '');
       
       const nameEl = document.getElementById('google-user-name');
       const emailEl = document.getElementById('google-user-email');
@@ -3300,6 +3378,11 @@ function handleGoogleLogout() {
   }
   googleAccessToken = null;
   localStorage.removeItem('progreso-google-signed-in');
+  localStorage.removeItem('progreso-google-access-token');
+  localStorage.removeItem('progreso-google-token-expiration');
+  localStorage.removeItem('progreso-google-user-email');
+  localStorage.removeItem('progreso-google-user-name');
+  localStorage.removeItem('progreso-google-user-picture');
   
   const nameEl = document.getElementById('google-user-name');
   const emailEl = document.getElementById('google-user-email');
@@ -3429,15 +3512,24 @@ async function restoreDataFromDrive() {
     if (res.ok) {
       const cloudLogs = await res.json();
       if (Array.isArray(cloudLogs)) {
-        if (confirm(`Found ${cloudLogs.length} exercises logged in the cloud. Do you want to merge them into your local history?`)) {
+        const replaceChoice = confirm(`Found ${cloudLogs.length} exercises logged in the cloud.\n\n- Click OK to REPLACE your local history with this cloud backup (recommended to keep devices in sync).\n- Click Cancel to MERGE the cloud backup into your current local history.`);
+        
+        if (replaceChoice) {
+          logsData = cloudLogs;
+          sortLogsChronologically();
+          saveLogsToStorage();
+          updateDashboard();
+          updateProfileStats();
+          const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          updateGoogleSyncStatus(`Restored (replaced) at ${now}`);
+          alert(`Successfully replaced local history with ${cloudLogs.length} exercises from the cloud!`);
+        } else {
           mergeLogs(cloudLogs);
           updateDashboard();
           updateProfileStats();
           const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-          updateGoogleSyncStatus(`Synced successfully at ${now}`);
-          alert(`Successfully synced and merged ${cloudLogs.length} exercises from the cloud!`);
-        } else {
-          updateGoogleSyncStatus('Sync cancelled.');
+          updateGoogleSyncStatus(`Restored (merged) at ${now}`);
+          alert(`Successfully merged ${cloudLogs.length} exercises from the cloud into your local history!`);
         }
       } else {
         updateGoogleSyncStatus('Invalid data format.');
@@ -3454,6 +3546,37 @@ async function restoreDataFromDrive() {
     if (backupBtn) backupBtn.disabled = false;
     if (restoreBtn) restoreBtn.disabled = false;
   }
+}
+
+function showCachedUserProfile() {
+  const name = localStorage.getItem('progreso-google-user-name') || 'Google User';
+  const email = localStorage.getItem('progreso-google-user-email') || '';
+  const picture = localStorage.getItem('progreso-google-user-picture') || '';
+  
+  const nameEl = document.getElementById('google-user-name');
+  const emailEl = document.getElementById('google-user-email');
+  const avatarImg = document.getElementById('google-user-avatar');
+  const fallbackAvatar = document.getElementById('google-user-no-avatar');
+  
+  if (nameEl) nameEl.textContent = name;
+  if (emailEl) emailEl.textContent = email;
+  
+  if (picture && avatarImg) {
+    avatarImg.src = picture;
+    avatarImg.style.display = 'block';
+    if (fallbackAvatar) fallbackAvatar.style.display = 'none';
+  } else {
+    if (avatarImg) avatarImg.style.display = 'none';
+    if (fallbackAvatar) {
+      fallbackAvatar.style.display = 'flex';
+      fallbackAvatar.textContent = (name || 'G')[0].toUpperCase();
+    }
+  }
+  
+  const loggedOutDiv = document.getElementById('google-logged-out');
+  const loggedInDiv = document.getElementById('google-logged-in');
+  if (loggedOutDiv) loggedOutDiv.style.display = 'none';
+  if (loggedInDiv) loggedInDiv.style.display = 'block';
 }
 
 // Global callback for async script loading
