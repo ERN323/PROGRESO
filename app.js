@@ -208,6 +208,11 @@ function switchTab(tabName) {
   const tabOrder = ['profile', 'workout', 'analytics'];
   const targetIndex = tabOrder.indexOf(tabName);
 
+  // Check if we are changing tabs
+  const currentActiveTabEl = document.querySelector('.nav-item.active');
+  const currentTabName = currentActiveTabEl ? currentActiveTabEl.dataset.tab : '';
+  const isTabChanging = (currentTabName !== tabName);
+
   // Hide all tab panels and clear navigation item states
   document.querySelectorAll('.tab-panel').forEach(panel => {
     panel.classList.remove('active');
@@ -252,6 +257,11 @@ function switchTab(tabName) {
     }, 50);
   } else if (tabName === 'profile') {
     updateProfileStats();
+  }
+
+  // Scroll to top of the page when changing tabs
+  if (isTabChanging) {
+    window.scrollTo(0, 0);
   }
 }
 
@@ -991,6 +1001,7 @@ function setupEventListeners() {
   let gestureChecked = false;
   let isSwipeLock = false;
   let isTouchTracked = false;
+  let initialScrollY = 0;
 
   const tabOrder = ['profile', 'workout', 'analytics'];
   const viewport = document.getElementById('tabs-viewport');
@@ -1037,6 +1048,7 @@ function setupEventListeners() {
 
     touchStartX = e.touches[0].clientX;
     touchStartY = e.touches[0].clientY;
+    initialScrollY = window.scrollY;
     isTouchTracked = true;
   }, { passive: true });
 
@@ -1088,6 +1100,12 @@ function setupEventListeners() {
 
       currentTranslateX = targetTranslate;
       viewport.style.transform = `translateX(${currentTranslateX}px)`;
+
+      // Interpolate vertical scroll position during horizontal swipe
+      if (initialScrollY > 0) {
+        const progress = Math.min(Math.abs(diffX) / containerWidth, 1);
+        window.scrollTo(0, initialScrollY * (1 - progress));
+      }
     }
   }, { passive: false });
 
@@ -1115,6 +1133,11 @@ function setupEventListeners() {
           if (currentIndex > 0) {
             targetIndex = currentIndex - 1;
           }
+        }
+
+        // Restore scroll position smoothly if layout transitions back to the same tab
+        if (targetIndex === currentIndex && initialScrollY > 0) {
+          window.scrollTo({ top: initialScrollY, behavior: 'smooth' });
         }
 
         switchTab(tabOrder[targetIndex]);
