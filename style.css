@@ -1451,14 +1451,14 @@ input[type="range"]::-moz-range-thumb:hover {
 
 /* Big Circular Start Session Button */
 .btn-start-session-circle {
-  width: 230px;
-  height: 230px;
+  width: 270px;
+  height: 270px;
   border-radius: 50%;
   background: var(--accent-bg-glow);
   border: 3px solid var(--accent-color);
   color: #ffffff;
   font-family: var(--font-family);
-  font-size: 1.4rem;
+  font-size: 1.6rem;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 1.5px;
@@ -1467,8 +1467,8 @@ input[type="range"]::-moz-range-thumb:hover {
   justify-content: center;
   text-align: center;
   cursor: pointer;
-  margin: 10px auto;
-  box-shadow: 0 0 20px var(--accent-glow), inset 0 0 15px var(--accent-bg-glow);
+  margin: 15px auto;
+  box-shadow: 0 0 25px var(--accent-glow), inset 0 0 20px var(--accent-bg-glow);
   transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   animation: pulse-glow-circle 2.5s infinite alternate;
   outline: none;
