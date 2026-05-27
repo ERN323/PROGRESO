@@ -130,7 +130,15 @@ header {
   flex: 0 0 100%;
   width: 100%;
   box-sizing: border-box;
+  display: none;
+}
+
+.tab-panel.active {
   display: block;
+}
+
+#tabs-viewport.transitioning .tab-panel {
+  display: block !important;
 }
 
 /* Theme Controller */
@@ -1514,4 +1522,12 @@ body.theme-white .btn-start-session-circle:hover span {
   100% {
     box-shadow: 0 0 30px var(--accent-glow-strong), inset 0 0 20px var(--accent-bg-glow);
   }
+}
+
+/* Flash Success style for catalogue items on tap */
+.flash-success {
+  background: var(--accent-bg-glow) !important;
+  border-color: var(--accent-color) !important;
+  box-shadow: 0 0 15px var(--accent-glow) !important;
+  transform: scale(0.97);
 }

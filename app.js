@@ -230,8 +230,16 @@ function switchTab(tabName) {
   // Shift viewport to active tab panel (including the 24px gap between panels)
   const viewport = document.getElementById('tabs-viewport');
   if (viewport) {
+    viewport.classList.add('transitioning');
     viewport.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)';
     viewport.style.transform = `translateX(calc(-${targetIndex * 100}% - ${targetIndex * 24}px))`;
+    
+    if (window.tabTransitionTimeout) {
+      clearTimeout(window.tabTransitionTimeout);
+    }
+    window.tabTransitionTimeout = setTimeout(() => {
+      viewport.classList.remove('transitioning');
+    }, 300);
   }
   
   // Handle tab specific events
@@ -1136,7 +1144,6 @@ function addPlannedExercise() {
   });
   
   nameInput.value = '';
-  setsInput.value = '4';
   
   renderPlannedExercisesList();
   nameInput.focus();
@@ -2468,7 +2475,7 @@ function renderCatalogueExerciseList() {
       item.innerHTML = `
         <span>${ex.name} <span style="font-size:0.75rem; color:var(--text-secondary); margin-left:6px;">(${ex.category})</span></span>
         <div style="display:flex; gap:10px; align-items:center;">
-          <button class="add-ex-btn" title="Add to Routine" onclick="addCatalogueExercise('${ex.name.replace(/'/g, "\\'")}')">
+          <button class="add-ex-btn" title="Add to Routine" onclick="addCatalogueExercise('${ex.name.replace(/'/g, "\\'")}', event)">
             <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
             </svg>
@@ -2491,7 +2498,7 @@ function renderCatalogueExerciseList() {
       item.className = 'catalogue-item';
       item.innerHTML = `
         <span>${ex}</span>
-        <button class="add-ex-btn" title="Add to Routine" onclick="addCatalogueExercise('${ex.replace(/'/g, "\\'")}')">
+        <button class="add-ex-btn" title="Add to Routine" onclick="addCatalogueExercise('${ex.replace(/'/g, "\\'")}', event)">
           <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
           </svg>
@@ -2503,7 +2510,7 @@ function renderCatalogueExerciseList() {
 }
 
 // Add exercise from catalogue list directly to planned exercises
-window.addCatalogueExercise = function(name) {
+window.addCatalogueExercise = function(name, event) {
   const setsInput = document.getElementById('plan-ex-sets');
   const sets = parseInt(setsInput.value) || 4;
   
@@ -2514,6 +2521,18 @@ window.addCatalogueExercise = function(name) {
   });
   
   renderPlannedExercisesList();
+
+  // Flash item to indicate successful add
+  if (event && event.currentTarget) {
+    const btn = event.currentTarget;
+    const parent = btn.closest('.catalogue-item');
+    if (parent) {
+      parent.classList.add('flash-success');
+      setTimeout(() => {
+        parent.classList.remove('flash-success');
+      }, 400);
+    }
+  }
 };
 
 // Deletes a custom exercise
@@ -2583,10 +2602,11 @@ function renderPresetBuilderCatalogue() {
     item.style.background = 'rgba(255, 255, 255, 0.02)';
     item.style.border = '1px solid rgba(255, 255, 255, 0.04)';
     item.style.marginBottom = '4px';
+    item.style.transition = 'all 0.15s';
     
     item.innerHTML = `
       <span style="color:var(--text-primary); text-overflow:ellipsis; overflow:hidden; white-space:nowrap; max-width:180px;">${name}</span>
-      <button class="add-ex-btn" title="Add to Preset" onclick="addExerciseToPresetBuilderList('${name.replace(/'/g, "\\'")}')" style="background:transparent; border:none; color:var(--text-secondary); cursor:pointer; display:flex; align-items:center; justify-content:center; width:20px; height:20px;">
+      <button class="add-ex-btn" title="Add to Preset" onclick="addExerciseToPresetBuilderList('${name.replace(/'/g, "\\'")}', event)" style="background:transparent; border:none; color:var(--text-secondary); cursor:pointer; display:flex; align-items:center; justify-content:center; width:20px; height:20px;">
         <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
           <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
         </svg>
@@ -2597,12 +2617,24 @@ function renderPresetBuilderCatalogue() {
 }
 
 // Add exercise from preset catalogue to temporary preset builder list
-window.addExerciseToPresetBuilderList = function(name) {
+window.addExerciseToPresetBuilderList = function(name, event) {
   const setsInput = document.getElementById('preset-builder-sets-input');
   const sets = parseInt(setsInput.value) || 4;
   
   presetBuilderExercises.push({ name, plannedSets: sets });
   renderPresetBuilderExercises();
+
+  // Flash item to indicate successful add
+  if (event && event.currentTarget) {
+    const btn = event.currentTarget;
+    const parent = btn.parentElement;
+    if (parent) {
+      parent.classList.add('flash-success');
+      setTimeout(() => {
+        parent.classList.remove('flash-success');
+      }, 400);
+    }
+  }
 };
 
 // Render muscle training split progress bars
