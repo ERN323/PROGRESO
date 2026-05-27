@@ -710,13 +710,27 @@ function setupEventListeners() {
   }
 
   // Welcome Screen actions
-  document.getElementById('start-session-btn').addEventListener('click', () => {
-    requestNotificationPermission();
-    activeSession.date = getTodayDateString();
-    activeSession.exercises = [];
-    renderPlannedExercisesList();
-    transitionTo(AppState.PLAN_EXERCISES);
-  });
+  const startSessionCircleBtn = document.getElementById('start-session-circle-btn');
+  if (startSessionCircleBtn) {
+    startSessionCircleBtn.addEventListener('click', openSessionPickerModal);
+  }
+
+  const modalStartEmptyBtn = document.getElementById('modal-start-empty-btn');
+  if (modalStartEmptyBtn) {
+    modalStartEmptyBtn.addEventListener('click', () => {
+      requestNotificationPermission();
+      activeSession.date = getTodayDateString();
+      activeSession.exercises = [];
+      renderPlannedExercisesList();
+      transitionTo(AppState.PLAN_EXERCISES);
+      closeSessionPickerModal();
+    });
+  }
+
+  const modalClosePickerBtn = document.getElementById('modal-close-picker-btn');
+  if (modalClosePickerBtn) {
+    modalClosePickerBtn.addEventListener('click', closeSessionPickerModal);
+  }
 
   // Planner actions
   document.getElementById('plan-add-btn').addEventListener('click', addPlannedExercise);
@@ -2171,17 +2185,32 @@ function renderPresetsInProfile() {
   });
 }
 
+function openSessionPickerModal() {
+  const modal = document.getElementById('session-picker-modal');
+  if (modal) {
+    modal.classList.add('active');
+    renderPresetsOnWelcome();
+  }
+}
+
+function closeSessionPickerModal() {
+  const modal = document.getElementById('session-picker-modal');
+  if (modal) {
+    modal.classList.remove('active');
+  }
+}
+
 // Renders presets on the welcome screen
 function renderPresetsOnWelcome() {
-  const customContainer = document.getElementById('welcome-custom-presets-list');
-  const defaultContainer = document.getElementById('welcome-default-presets-list');
+  const customContainer = document.getElementById('modal-custom-presets-list');
+  const defaultContainer = document.getElementById('modal-default-presets-list');
   
   if (customContainer) {
     customContainer.innerHTML = '';
     if (customPresets.length === 0) {
-      customContainer.innerHTML = '<p style="color: var(--text-secondary); font-size: 0.85rem; font-style: italic; padding: 4px 0;">No custom presets. Create one in the Profile tab!</p>';
+      customContainer.innerHTML = '<p style="color: var(--text-secondary); font-size: 0.85rem; font-style: italic; padding: 12px 0; text-align: center; width: 100%;">No custom presets. Create one in the Profile tab!</p>';
     } else {
-      customPresets.forEach((preset, index) => {
+      customPresets.forEach((preset) => {
         const card = document.createElement('div');
         card.className = 'preset-welcome-card';
         const exCount = preset.exercises.length;
@@ -2191,11 +2220,12 @@ function renderPresetsOnWelcome() {
             <div class="p-name">${preset.name}</div>
             <div class="p-desc">${exCount} exercise${exCount === 1 ? '' : 's'} planned</div>
           </div>
-          <div class="p-arrow">→</div>
+          <div class="p-arrow"></div>
         `;
         
         card.addEventListener('click', () => {
           loadPresetIntoSession(preset);
+          closeSessionPickerModal();
         });
         
         customContainer.appendChild(card);
@@ -2205,7 +2235,7 @@ function renderPresetsOnWelcome() {
   
   if (defaultContainer) {
     defaultContainer.innerHTML = '';
-    DEFAULT_PRESETS.forEach((preset, index) => {
+    DEFAULT_PRESETS.forEach((preset) => {
       const card = document.createElement('div');
       card.className = 'preset-welcome-card';
       
@@ -2214,11 +2244,12 @@ function renderPresetsOnWelcome() {
           <div class="p-name">${preset.name}</div>
           <div class="p-desc">${preset.description}</div>
         </div>
-        <div class="p-arrow">→</div>
+        <div class="p-arrow"></div>
       `;
       
       card.addEventListener('click', () => {
         loadPresetIntoSession(preset);
+        closeSessionPickerModal();
       });
       
       defaultContainer.appendChild(card);
@@ -3427,6 +3458,14 @@ async function backupDataToDrive() {
     updateGoogleSyncStatus('Checking existing backups...');
     const fileId = await findBackupFileId();
     
+    // Create new unified backup payload containing logs, custom presets, and custom exercises
+    const backupPayload = {
+      version: 2,
+      logs: logsData,
+      presets: customPresets,
+      customExercises: customExercises
+    };
+    
     let res;
     if (fileId) {
       updateGoogleSyncStatus('Syncing changes to cloud...');
@@ -3436,7 +3475,7 @@ async function backupDataToDrive() {
           'Authorization': `Bearer ${googleAccessToken}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(logsData)
+        body: JSON.stringify(backupPayload)
       });
     } else {
       updateGoogleSyncStatus('Creating new cloud backup...');
@@ -3454,7 +3493,7 @@ async function backupDataToDrive() {
         JSON.stringify(fileMetadata) + 
         delimiter + 
         'Content-Type: application/json\r\n\r\n' + 
-        JSON.stringify(logsData) + 
+        JSON.stringify(backupPayload) + 
         close_delim;
         
       res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
@@ -3510,30 +3549,71 @@ async function restoreDataFromDrive() {
     });
     
     if (res.ok) {
-      const cloudLogs = await res.json();
-      if (Array.isArray(cloudLogs)) {
-        const replaceChoice = confirm(`Found ${cloudLogs.length} exercises logged in the cloud.\n\n- Click OK to REPLACE your local history with this cloud backup (recommended to keep devices in sync).\n- Click Cancel to MERGE the cloud backup into your current local history.`);
+      const backupData = await res.json();
+      let cloudLogs = [];
+      let cloudPresets = [];
+      let cloudCustomExercises = [];
+      
+      if (Array.isArray(backupData)) {
+        // Legacy backup format (just array of logs)
+        cloudLogs = backupData;
+      } else if (backupData && typeof backupData === 'object') {
+        // New unified backup format
+        cloudLogs = backupData.logs || [];
+        cloudPresets = backupData.presets || [];
+        cloudCustomExercises = backupData.customExercises || [];
+      }
+      
+      const replaceChoice = confirm(`Found ${cloudLogs.length} exercises logged and ${cloudPresets.length} custom presets in the cloud.\n\n- Click OK to REPLACE your local history and presets with this cloud backup (recommended to keep devices in sync).\n- Click Cancel to MERGE the cloud backup into your current local history and presets.`);
+      
+      if (replaceChoice) {
+        logsData = cloudLogs;
+        customPresets = cloudPresets;
+        customExercises = cloudCustomExercises;
         
-        if (replaceChoice) {
-          logsData = cloudLogs;
-          sortLogsChronologically();
-          saveLogsToStorage();
-          updateDashboard();
-          updateProfileStats();
-          const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-          updateGoogleSyncStatus(`Restored (replaced) at ${now}`);
-          alert(`Successfully replaced local history with ${cloudLogs.length} exercises from the cloud!`);
-        } else {
-          mergeLogs(cloudLogs);
-          updateDashboard();
-          updateProfileStats();
-          const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-          updateGoogleSyncStatus(`Restored (merged) at ${now}`);
-          alert(`Successfully merged ${cloudLogs.length} exercises from the cloud into your local history!`);
-        }
+        sortLogsChronologically();
+        saveLogsToStorage();
+        saveCustomPresets();
+        saveCustomExercises();
+        
+        renderPresets();
+        updateDashboard();
+        updateProfileStats();
+        
+        const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        updateGoogleSyncStatus(`Restored (replaced) at ${now}`);
+        alert(`Successfully replaced local history and presets with cloud data!`);
       } else {
-        updateGoogleSyncStatus('Invalid data format.');
-        alert('Invalid data structure found in the Google Drive backup file.');
+        mergeLogs(cloudLogs);
+        
+        // Merge custom presets by name
+        const existingPresetNames = new Set(customPresets.map(p => p.name));
+        cloudPresets.forEach(p => {
+          if (!existingPresetNames.has(p.name)) {
+            customPresets.push(p);
+          }
+        });
+        
+        // Merge custom exercises by name
+        const existingExNames = new Set(customExercises.map(e => e.name || e));
+        cloudCustomExercises.forEach(e => {
+          const name = e.name || e;
+          if (!existingExNames.has(name)) {
+            customExercises.push(e);
+          }
+        });
+        
+        saveLogsToStorage();
+        saveCustomPresets();
+        saveCustomExercises();
+        
+        renderPresets();
+        updateDashboard();
+        updateProfileStats();
+        
+        const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        updateGoogleSyncStatus(`Restored (merged) at ${now}`);
+        alert(`Successfully merged cloud data into local history and presets!`);
       }
     } else {
       updateGoogleSyncStatus('Download failed.');

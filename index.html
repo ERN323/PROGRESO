@@ -224,31 +224,13 @@
         
         <!-- STATE 1: WELCOME SCREEN -->
         <div id="screen-welcome" class="state-screen active">
-          <div class="welcome-display" style="padding: 16px 10px 10px 10px;">
+          <div class="welcome-display" style="padding: 16px 10px 10px 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 380px;">
             <div class="date-badge" id="welcome-date">25.05.2026</div>
-            <h2>Ready to train?</h2>
-            <p style="color: var(--text-secondary); margin-bottom: 20px; font-size: 0.9rem;">
-              Track exercises, log sets, and sync your stats offline.
-            </p>
-            <button class="btn btn-primary" id="start-session-btn" style="padding: 14px 32px; font-size: 1rem; border-radius: 30px; margin-bottom: 24px; width: 100%;">
-              Start Empty Session
+            <h2 style="margin-top: 10px; margin-bottom: 20px;">Ready to train?</h2>
+            
+            <button class="btn-start-session-circle" id="start-session-circle-btn">
+              <span>Start<br>Session</span>
             </button>
-
-            <!-- Custom Presets Section -->
-            <div class="presets-welcome-section" style="width: 100%; text-align: left; margin-bottom: 20px;">
-              <h4 style="font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px;">My Presets</h4>
-              <div id="welcome-custom-presets-list" style="display: flex; flex-direction: column; gap: 8px;">
-                <!-- Dynamically populated -->
-              </div>
-            </div>
-
-            <!-- Predefined Suggestions Section -->
-            <div class="presets-welcome-section" style="width: 100%; text-align: left;">
-              <h4 style="font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px;">Workout Suggestions</h4>
-              <div id="welcome-default-presets-list" style="display: flex; flex-direction: column; gap: 8px;">
-                <!-- Dynamically populated -->
-              </div>
-            </div>
           </div>
         </div>
 
@@ -733,6 +715,45 @@
         <button class="btn btn-secondary" id="preset-cancel-btn" style="flex: 1;">Cancel</button>
         <button class="btn btn-primary" id="preset-save-btn" style="flex: 1;">Save Preset</button>
       </div>
+    </div>
+  </div>
+
+  <!-- SESSION PICKER MODAL -->
+  <div id="session-picker-modal" class="modal-overlay">
+    <div class="modal-content card" style="max-width: 400px; display: flex; flex-direction: column; max-height: 85vh;">
+      <h3 class="card-title" style="text-align: center; margin-bottom: 20px;">Start New Session</h3>
+      
+      <div style="overflow-y: auto; flex: 1; padding-right: 4px; display: flex; flex-direction: column; gap: 20px; margin-bottom: 20px;">
+        <!-- Quick Start option -->
+        <div>
+          <button class="btn btn-primary" id="modal-start-empty-btn" style="width: 100%; padding: 14px; font-size: 1rem; border-radius: 12px; display: flex; justify-content: center; align-items: center; gap: 8px; font-weight: 700;">
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+            </svg>
+            Start Empty Session
+          </button>
+        </div>
+
+        <!-- Custom Presets section -->
+        <div class="presets-welcome-section" style="width: 100%; text-align: left;">
+          <h4 style="font-size: 0.85rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.8px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); padding-bottom: 4px;">My Custom Presets</h4>
+          <div id="modal-custom-presets-list" style="display: flex; flex-direction: column; gap: 8px;">
+            <!-- Dynamically populated custom presets -->
+          </div>
+        </div>
+
+        <!-- Default suggestions section -->
+        <div class="presets-welcome-section" style="width: 100%; text-align: left;">
+          <h4 style="font-size: 0.85rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.8px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); padding-bottom: 4px;">Workout Suggestions</h4>
+          <div id="modal-default-presets-list" style="display: flex; flex-direction: column; gap: 8px;">
+            <!-- Dynamically populated suggestions -->
+          </div>
+        </div>
+      </div>
+
+      <button class="btn btn-secondary" id="modal-close-picker-btn" style="width: 100%; border-radius: 12px; padding: 12px; font-weight: 600;">
+        Cancel
+      </button>
     </div>
   </div>
 

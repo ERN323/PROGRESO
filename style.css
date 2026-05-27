@@ -1448,3 +1448,70 @@ input[type="range"]::-moz-range-thumb:hover {
   box-shadow: inset 0 0 10px #4285F4;
   opacity: 1;
 }
+
+/* Big Circular Start Session Button */
+.btn-start-session-circle {
+  width: 170px;
+  height: 170px;
+  border-radius: 50%;
+  background: var(--accent-bg-glow);
+  border: 3px solid var(--accent-color);
+  color: #ffffff;
+  font-family: var(--font-family);
+  font-size: 1.15rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  cursor: pointer;
+  margin: 30px auto;
+  box-shadow: 0 0 20px var(--accent-glow), inset 0 0 15px var(--accent-bg-glow);
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  animation: pulse-glow-circle 2.5s infinite alternate;
+  outline: none;
+  position: relative;
+  z-index: 1;
+}
+
+.btn-start-session-circle span {
+  display: block;
+  line-height: 1.3;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+}
+
+.btn-start-session-circle:hover {
+  transform: scale(1.06);
+  background: var(--accent-color);
+  color: #000000;
+  box-shadow: 0 0 35px var(--accent-glow-strong), inset 0 0 15px rgba(255, 255, 255, 0.3);
+}
+
+.btn-start-session-circle:hover span {
+  text-shadow: none;
+  color: #000000;
+}
+
+body.theme-white .btn-start-session-circle:hover {
+  color: #000000;
+}
+
+body.theme-white .btn-start-session-circle:hover span {
+  color: #000000;
+}
+
+.btn-start-session-circle:active {
+  transform: scale(0.95);
+  box-shadow: 0 0 15px var(--accent-glow);
+}
+
+@keyframes pulse-glow-circle {
+  0% {
+    box-shadow: 0 0 15px var(--accent-glow), inset 0 0 10px var(--accent-bg-glow);
+  }
+  100% {
+    box-shadow: 0 0 30px var(--accent-glow-strong), inset 0 0 20px var(--accent-bg-glow);
+  }
+}
