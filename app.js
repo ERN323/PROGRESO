@@ -178,8 +178,10 @@ document.addEventListener('DOMContentLoaded', () => {
   registerServiceWorker();
   requestPersistentStorage();
   
-  // Initialize Google Auth Sync
-  initGoogleAuthSync();
+  // Initialize Google Auth Sync if library is already loaded
+  if (typeof google !== 'undefined' && google.accounts) {
+    initGoogleAuthSync();
+  }
   
   // Set default tab to workout
   switchTab('workout');
@@ -3440,4 +3442,10 @@ async function restoreDataFromDrive() {
     if (restoreBtn) restoreBtn.disabled = false;
   }
 }
+
+// Global callback for async script loading
+window.onGoogleLibraryLoad = function() {
+  console.log('[PROGRESO] Google GIS Library loaded.');
+  initGoogleAuthSync();
+};
 
