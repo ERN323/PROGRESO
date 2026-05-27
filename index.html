@@ -12,6 +12,8 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <!-- SheetJS for CSV/XLSX reading & writing -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- Google Identity Services client script -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body class="theme-purple">
 
@@ -31,6 +33,70 @@
         <div class="tab-subtitle" style="text-align: center; margin-top: -8px; margin-bottom: 24px; font-size: 0.85rem; color: var(--text-secondary);">
           Personal Profile & Settings
         </div>
+
+      <!-- Google Sync Card -->
+      <section class="card google-sync-card" style="margin-bottom: 24px;">
+        <h3 class="card-title">Cloud Backup & Sync</h3>
+        
+        <!-- Setup State: Client ID Prompt -->
+        <div id="google-setup-prompt" style="display: none; text-align: center; padding: 10px 0;">
+          <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 12px;">
+            Configure your Google OAuth Client ID to enable cloud backup:
+          </p>
+          <input type="text" id="google-client-id-input" placeholder="Paste Client ID here..." style="font-size: 0.85rem; padding: 10px; border-radius: 8px; margin-bottom: 10px; width: 100%;">
+          <button class="btn btn-primary" id="save-client-id-btn" style="width: 100%; border-radius: 8px; padding: 10px; font-size: 0.85rem;">
+            Save Client ID
+          </button>
+        </div>
+
+        <!-- State 1: Logged Out -->
+        <div id="google-logged-out" class="google-sync-state" style="display: none; text-align: center; padding: 10px 0;">
+          <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 16px;">
+            Back up your workouts and restore your progress on any device securely.
+          </p>
+          <button class="btn btn-google" id="google-login-btn">
+            <!-- Google Logo SVG -->
+            <svg width="18" height="18" viewBox="0 0 18 18">
+              <path fill="#4285F4" d="M17.64 9.2c0-.63-.06-1.25-.16-1.84H9v3.47h4.84c-.21 1.12-.84 2.07-1.8 2.72v2.26h2.9c1.7-1.57 2.7-3.88 2.7-6.61z"/>
+              <path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.19l-2.9-2.26c-.8.54-1.83.86-3.06.86-2.35 0-4.34-1.59-5.05-3.72H.9v2.33C2.38 15.96 5.4 18 9 18z"/>
+              <path fill="#FBBC05" d="M3.95 10.69A5.4 5.4 0 0 1 3.6 9c0-.59.1-1.16.29-1.69V4.98H.9A8.99 8.99 0 0 0 0 9c0 1.54.39 3.01 1.09 4.31l2.86-2.62z"/>
+              <path fill="#EA4335" d="M9 3.6c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.8 11.43 0 9 0 5.4 0 2.38 2.04.9 4.98l2.86 2.62c.71-2.13 2.7-3.72 5.05-3.72z"/>
+            </svg>
+            Sign in with Google
+          </button>
+        </div>
+
+        <!-- State 2: Logged In -->
+        <div id="google-logged-in" class="google-sync-state" style="display: none;">
+          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 18px;">
+            <img id="google-user-avatar" src="" alt="Avatar" style="width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--accent-color); background: rgba(255,255,255,0.05); display: none;">
+            <div id="google-user-no-avatar" style="width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--accent-color); background: var(--accent-bg-glow); display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--accent-color); font-size: 1.1rem;">
+              G
+            </div>
+            <div style="text-align: left;">
+              <h4 style="margin: 0; font-size: 1rem; color: #ffffff;" id="google-user-name">Loading Profile...</h4>
+              <p style="margin: 2px 0 0 0; font-size: 0.75rem; color: var(--text-secondary);" id="google-user-email">...</p>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <div style="display: flex; gap: 10px; width: 100%;">
+              <button class="btn btn-primary" id="google-backup-btn" style="flex: 1; padding: 10px; font-size: 0.82rem; border-radius: 8px;">
+                Backup Now
+              </button>
+              <button class="btn btn-secondary" id="google-restore-btn" style="flex: 1; padding: 10px; font-size: 0.82rem; border-radius: 8px;">
+                Restore Sync
+              </button>
+            </div>
+            <div id="google-sync-status" style="font-size: 0.75rem; color: var(--text-secondary); text-align: center; margin-top: 4px;">
+              Not synced during this session.
+            </div>
+            <button class="btn btn-danger" id="google-logout-btn" style="width: 100%; border-radius: 8px; padding: 8px; font-size: 0.8rem; margin-top: 6px;">
+              Sign Out
+            </button>
+          </div>
+        </div>
+      </section>
 
       <!-- User Statistics -->
       <section class="card profile-card" style="margin-bottom: 24px;">

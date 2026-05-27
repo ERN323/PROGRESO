@@ -1371,3 +1371,80 @@ input[type="range"]::-moz-range-thumb:hover {
   transform: rotate(180deg);
   border-top-color: var(--accent-color);
 }
+
+/* Google Sync Card & Custom Google Button */
+.google-sync-card {
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  transition: border-color 0.3s;
+}
+
+.google-sync-card:hover {
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.btn-google {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 13px 20px;
+  font-family: var(--font-family);
+  font-size: 0.95rem;
+  font-weight: 700;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #12131a;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  gap: 12px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-google svg {
+  flex-shrink: 0;
+  transition: transform 0.3s ease;
+}
+
+.btn-google:hover {
+  background: #ffffff;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3), 0 0 15px var(--accent-glow);
+  border-color: var(--accent-color);
+}
+
+.btn-google:hover svg {
+  transform: scale(1.1);
+}
+
+/* Click/Active State: Neon Pulse & Scale */
+.btn-google:active {
+  transform: translateY(1px) scale(0.98);
+  background: #f1f2f5;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), 0 0 25px var(--accent-glow-strong);
+  border-color: var(--accent-color);
+  transition: all 0.05s ease;
+}
+
+/* Glowing border pulse effect */
+.btn-google::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 12px;
+  box-shadow: inset 0 0 0 0 var(--accent-color);
+  opacity: 0;
+  transition: opacity 0.3s, box-shadow 0.3s;
+  pointer-events: none;
+}
+
+.btn-google:active::after {
+  box-shadow: inset 0 0 10px var(--accent-color);
+  opacity: 1;
+}
