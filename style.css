@@ -172,6 +172,16 @@ header {
   opacity: 1 !important;
 }
 
+.tab-subtitle {
+  text-align: center;
+  margin-top: 0;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  padding: 4px 0;
+  box-sizing: border-box;
+}
+
 /* Theme Controller */
 .theme-selector-container {
   display: flex;

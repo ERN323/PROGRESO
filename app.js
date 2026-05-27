@@ -3098,6 +3098,9 @@ function registerServiceWorker() {
     navigator.serviceWorker.register('sw.js').then((reg) => {
       console.log('[PROGRESO] Service Worker registered:', reg.scope);
       
+      // Force PWA update check on page load to bypass HTTP cache for sw.js
+      reg.update();
+      
       // If there is an update already waiting, show the banner
       if (reg.waiting) {
         showUpdateBanner(reg.waiting);
