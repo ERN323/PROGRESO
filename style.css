@@ -155,6 +155,7 @@ header {
   overflow: hidden;
   opacity: 0;
   transition: opacity 0.15s ease-in-out;
+  padding-top: 8px; /* Give vertical breathing room under static header border */
   padding-bottom: 92px; /* Pad bottom inside scroll container to clear sticky nav */
   -webkit-overflow-scrolling: touch; /* Smooth iOS momentum scrolling */
 }
