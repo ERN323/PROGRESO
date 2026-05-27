@@ -68,23 +68,35 @@ body.theme-white {
   -webkit-tap-highlight-color: transparent;
 }
 
+html {
+  height: 100%;
+}
+
 body {
   font-family: var(--font-family);
   background: var(--bg-color);
   background-image: var(--bg-gradient);
   color: var(--text-primary);
-  min-height: 100vh;
-  padding: 20px 20px 92px 20px; /* Space at bottom for sticky nav */
+  height: 100%;
+  height: -webkit-fill-available;
+  padding: 20px 20px 0 20px; /* Sides and top padding, no bottom padding on body */
+  box-sizing: border-box;
   line-height: 1.5;
-  overflow-x: hidden;
+  overflow: hidden; /* Prevent body level scroll */
   max-width: 480px; /* Mobile-first container limit */
   margin: 0 auto;
   position: relative;
   box-shadow: 0 0 100px rgba(0, 0, 0, 0.8);
+  display: flex;
+  flex-direction: column;
 }
 
 .container {
   width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 /* Header */
@@ -121,10 +133,12 @@ header {
 .tabs-viewport {
   display: flex;
   width: 100%;
+  flex: 1; /* Stretch to fill remaining height */
+  min-height: 0; /* Crucial for child scroll containers */
   gap: 24px; /* Space between tab panels */
   transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
   will-change: transform;
-  align-items: flex-start; /* Align panels to start to allow independent heights */
+  align-items: stretch; /* Stretch child panels to full height */
 }
 
 .tab-panel {
@@ -136,17 +150,19 @@ header {
   overflow: hidden;
   opacity: 0;
   transition: opacity 0.15s ease-in-out;
+  padding-bottom: 92px; /* Pad bottom inside scroll container to clear sticky nav */
+  -webkit-overflow-scrolling: touch; /* Smooth iOS momentum scrolling */
 }
 
 .tab-panel.active {
   max-height: none;
-  overflow: visible;
+  overflow-y: auto; /* Enable independent vertical scrolling */
   opacity: 1;
 }
 
 #tabs-viewport.transitioning .tab-panel {
   max-height: none !important;
-  overflow: visible !important;
+  overflow: hidden !important; /* Hide scrollbars during transition */
   opacity: 1 !important;
 }
 
