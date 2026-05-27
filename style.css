@@ -82,7 +82,7 @@ body {
   color: var(--text-primary);
   height: 100%;
   height: -webkit-fill-available;
-  padding: 20px 20px 0 20px; /* Sides and top padding, no bottom padding on body */
+  padding: 28px 20px 0 20px; /* Increased top padding to 28px to clear notch/top banners */
   box-sizing: border-box;
   line-height: 1.5;
   overflow: hidden; /* Prevent body level scroll */
@@ -155,7 +155,7 @@ header {
   overflow: hidden;
   opacity: 0;
   transition: opacity 0.15s ease-in-out;
-  padding-top: 8px; /* Give vertical breathing room under static header border */
+  padding-top: 16px; /* Increased vertical breathing room to 16px to prevent subtitle overlap */
   padding-bottom: 92px; /* Pad bottom inside scroll container to clear sticky nav */
   -webkit-overflow-scrolling: touch; /* Smooth iOS momentum scrolling */
 }
