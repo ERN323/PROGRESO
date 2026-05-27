@@ -70,6 +70,9 @@ body.theme-white {
 
 html {
   height: 100%;
+  height: -webkit-fill-available;
+  overflow: hidden;
+  overscroll-behavior: none;
 }
 
 body {
@@ -83,6 +86,7 @@ body {
   box-sizing: border-box;
   line-height: 1.5;
   overflow: hidden; /* Prevent body level scroll */
+  overscroll-behavior: none; /* Prevent PWA vertical scroll bounce and pull-to-refresh */
   max-width: 480px; /* Mobile-first container limit */
   margin: 0 auto;
   position: relative;
@@ -145,6 +149,7 @@ header {
   flex: 0 0 100%;
   width: 100%;
   min-width: 100%; /* Prevent WebKit/Safari from collapsing panel width when height/max-height is 0 */
+  height: 100%; /* Force panel vertical height constraint to enable internal scrolling */
   box-sizing: border-box;
   max-height: 0;
   overflow: hidden;
