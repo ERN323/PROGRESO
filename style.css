@@ -130,6 +130,7 @@ header {
 .tab-panel {
   flex: 0 0 100%;
   width: 100%;
+  min-width: 100%; /* Prevent WebKit/Safari from collapsing panel width when height/max-height is 0 */
   box-sizing: border-box;
   max-height: 0;
   overflow: hidden;

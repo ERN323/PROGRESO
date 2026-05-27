@@ -1062,6 +1062,7 @@ function setupEventListeners() {
           isSwipeLock = true;
           isDragging = true;
           viewport.style.transition = 'none';
+          viewport.classList.add('transitioning'); // Make all panels visible during swipe drag
         } else {
           isSwipeLock = false;
           isDragging = false;
@@ -1117,6 +1118,8 @@ function setupEventListeners() {
         }
 
         switchTab(tabOrder[targetIndex]);
+      } else {
+        viewport.classList.remove('transitioning');
       }
     }
 
