@@ -35,6 +35,7 @@ let customExercises = [];
 let customPresets = [];
 let presetBuilderExercises = []; // Temp list of { name, plannedSets } in builder modal
 let activeEditingPresetIndex = null; // null if creating, number if editing
+let presetBuilderStep = 1; // Wizard step tracking
 let activeCatalogueCategory = 'Legs';
 let activeChartMode = 'exercise'; // 'exercise' or 'muscle'
 let activePresetBuilderCategory = 'Legs';
@@ -675,12 +676,28 @@ function setupEventListeners() {
   const presetCancelBtn = document.getElementById('preset-cancel-btn');
   if (presetCancelBtn) {
     presetCancelBtn.addEventListener('click', () => {
-      document.getElementById('preset-builder-modal').classList.remove('active');
+      if (presetBuilderStep === 1) {
+        document.getElementById('preset-builder-modal').classList.remove('active');
+      } else {
+        presetBuilderStep = 1;
+        updatePresetBuilderStepView();
+      }
     });
   }
   const presetSaveBtn = document.getElementById('preset-save-btn');
   if (presetSaveBtn) {
-    presetSaveBtn.addEventListener('click', savePreset);
+    presetSaveBtn.addEventListener('click', () => {
+      if (presetBuilderStep === 1) {
+        if (presetBuilderExercises.length === 0) {
+          alert('Please choose at least one exercise.');
+          return;
+        }
+        presetBuilderStep = 2;
+        updatePresetBuilderStepView();
+      } else {
+        savePreset();
+      }
+    });
   }
   const presetAddExBtn = document.getElementById('preset-add-ex-btn');
   if (presetAddExBtn) {
@@ -2372,18 +2389,17 @@ window.openPresetBuilder = function(presetIndex = null) {
   if (!modal || !titleEl || !nameInput) return;
   
   activeEditingPresetIndex = presetIndex;
+  presetBuilderStep = 1;
   
   // Clear inputs
   document.getElementById('preset-exercise-search').value = '';
   document.getElementById('preset-builder-sets-input').value = '';
   
   if (presetIndex === null) {
-    titleEl.textContent = 'Create Workout Preset';
     nameInput.value = '';
     presetBuilderExercises = [];
   } else {
     const preset = customPresets[presetIndex];
-    titleEl.textContent = 'Edit Workout Preset';
     nameInput.value = preset.name;
     // Deep clone exercises
     presetBuilderExercises = preset.exercises.map(e => ({ ...e }));
@@ -2397,7 +2413,35 @@ window.openPresetBuilder = function(presetIndex = null) {
   renderPresetBuilderCatalogue();
   
   renderPresetBuilderExercises();
+  updatePresetBuilderStepView();
   modal.classList.add('active');
+}
+
+// Updates the Step display and container visibilities for the Preset Builder wizard
+function updatePresetBuilderStepView() {
+  const step1Container = document.getElementById('preset-builder-step1-container');
+  const step2Container = document.getElementById('preset-builder-step2-container');
+  const titleEl = document.getElementById('preset-modal-title');
+  const cancelBtn = document.getElementById('preset-cancel-btn');
+  const saveBtn = document.getElementById('preset-save-btn');
+  
+  if (!step1Container || !step2Container || !titleEl || !cancelBtn || !saveBtn) return;
+  
+  if (presetBuilderStep === 1) {
+    step1Container.style.display = 'block';
+    step2Container.style.display = 'none';
+    const isEdit = activeEditingPresetIndex !== null;
+    titleEl.textContent = isEdit ? 'Edit Preset: Step 1 (Exercises)' : 'Create Preset: Step 1 (Exercises)';
+    cancelBtn.textContent = 'Cancel';
+    saveBtn.textContent = 'Next';
+  } else {
+    step1Container.style.display = 'none';
+    step2Container.style.display = 'block';
+    const isEdit = activeEditingPresetIndex !== null;
+    titleEl.textContent = isEdit ? 'Edit Preset: Step 2 (Review)' : 'Create Preset: Step 2 (Review)';
+    cancelBtn.textContent = 'Back';
+    saveBtn.textContent = isEdit ? 'Save Changes' : 'Save Preset';
+  }
 }
 
 // Renders the list of exercises inside the preset builder modal
@@ -2557,32 +2601,27 @@ function renderCatalogueExerciseList() {
       item.className = 'catalogue-item';
       item.style.cursor = 'pointer';
       item.addEventListener('click', (e) => {
-        if (e.target.closest('.add-ex-btn') || e.target.closest('.btn-danger') || e.target.closest('.ex-info-btn')) return;
+        if (e.target.closest('.btn-danger') || e.target.closest('.ex-info-btn')) return;
         addCatalogueExercise(ex.name, e);
       });
       
       item.innerHTML = `
-        <div style="display:flex; align-items:center; gap:8px; flex:1; overflow:hidden;">
-          <span class="ex-name-link" style="font-weight:500; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">${ex.name}</span>
-          <button class="ex-info-btn" style="background:transparent; border:none; color:var(--text-secondary); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; padding: 2px;" onclick="event.stopPropagation(); openExerciseDetail('${ex.name.replace(/'/g, "\\'")}')" title="View details & history">
-            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-              <circle cx="12" cy="12" r="10"></circle>
-              <line x1="12" y1="16" x2="12" y2="12"></line>
-              <line x1="12" y1="8" x2="12.01" y2="8"></line>
-            </svg>
-          </button>
-        </div>
-        <div style="display:flex; gap:10px; align-items:center;">
-          <button class="add-ex-btn" title="Add to Routine" onclick="event.stopPropagation(); addCatalogueExercise('${ex.name.replace(/'/g, "\\'")}', event)">
-            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
-            </svg>
-          </button>
-          <button class="btn btn-danger btn-icon" onclick="event.stopPropagation(); deleteCustomExercise(${idx})" style="width:20px; height:20px; border-radius:4px; padding:0; justify-content:center; display:flex; align-items:center;" title="Delete Exercise">
-            <svg width="10" height="10" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-            </svg>
-          </button>
+        <div style="display:flex; align-items:center; justify-content:space-between; width:100%; overflow:hidden; gap:8px;">
+          <span class="ex-name-link" style="font-weight:500; text-overflow:ellipsis; overflow:hidden; white-space:nowrap; flex:1;">${ex.name}</span>
+          <div style="display:flex; gap:8px; align-items:center; shrink:0;">
+            <button class="ex-info-btn" style="background:transparent; border:none; color:var(--text-secondary); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; padding: 2px;" onclick="event.stopPropagation(); openExerciseDetail('${ex.name.replace(/'/g, "\\'")}')" title="View details & history">
+              <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="16" x2="12" y2="12"></line>
+                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+              </svg>
+            </button>
+            <button class="btn btn-danger btn-icon" onclick="event.stopPropagation(); deleteCustomExercise(${idx})" style="width:20px; height:20px; border-radius:4px; padding:0; justify-content:center; display:flex; align-items:center;" title="Delete Exercise">
+              <svg width="10" height="10" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </button>
+          </div>
         </div>
       `;
       listContainer.appendChild(item);
@@ -2596,14 +2635,14 @@ function renderCatalogueExerciseList() {
       item.className = 'catalogue-item';
       item.style.cursor = 'pointer';
       item.addEventListener('click', (e) => {
-        if (e.target.closest('.add-ex-btn') || e.target.closest('.ex-info-btn')) return;
+        if (e.target.closest('.ex-info-btn')) return;
         addCatalogueExercise(ex, e);
       });
       
       item.innerHTML = `
-        <div style="display:flex; align-items:center; gap:8px; flex:1; overflow:hidden;">
-          <span class="ex-name-link" style="font-weight:500; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">${ex}</span>
-          <button class="ex-info-btn" style="background:transparent; border:none; color:var(--text-secondary); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; padding: 2px;" onclick="event.stopPropagation(); openExerciseDetail('${ex.replace(/'/g, "\\'")}')" title="View details & history">
+        <div style="display:flex; align-items:center; justify-content:space-between; width:100%; overflow:hidden; gap:8px;">
+          <span class="ex-name-link" style="font-weight:500; text-overflow:ellipsis; overflow:hidden; white-space:nowrap; flex:1;">${ex}</span>
+          <button class="ex-info-btn" style="background:transparent; border:none; color:var(--text-secondary); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; padding: 2px; shrink:0;" onclick="event.stopPropagation(); openExerciseDetail('${ex.replace(/'/g, "\\'")}')" title="View details & history">
             <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
               <circle cx="12" cy="12" r="10"></circle>
               <line x1="12" y1="16" x2="12" y2="12"></line>
@@ -2611,11 +2650,6 @@ function renderCatalogueExerciseList() {
             </svg>
           </button>
         </div>
-        <button class="add-ex-btn" title="Add to Routine" onclick="event.stopPropagation(); addCatalogueExercise('${ex.replace(/'/g, "\\'")}', event)">
-          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
-          </svg>
-        </button>
       `;
       listContainer.appendChild(item);
     });
@@ -2713,34 +2747,27 @@ function renderPresetBuilderCatalogue() {
     item.style.display = 'flex';
     item.style.justifyContent = 'space-between';
     item.style.alignItems = 'center';
-    item.style.padding = '6px 8px';
-    item.style.borderRadius = '6px';
+    item.style.padding = '8px 10px';
+    item.style.borderRadius = '8px';
     item.style.fontSize = '0.85rem';
     item.style.background = 'rgba(255, 255, 255, 0.02)';
     item.style.border = '1px solid rgba(255, 255, 255, 0.04)';
-    item.style.marginBottom = '4px';
+    item.style.marginBottom = '6px';
     item.style.transition = 'all 0.15s';
     item.style.cursor = 'pointer';
     
     item.addEventListener('click', (e) => {
-      if (e.target.closest('.add-ex-btn') || e.target.closest('.ex-info-btn')) return;
+      if (e.target.closest('.ex-info-btn')) return;
       addExerciseToPresetBuilderList(name, e);
     });
     
     item.innerHTML = `
-      <div style="display:flex; align-items:center; gap:6px; flex:1; overflow:hidden;">
-        <span class="ex-name-link" style="color:var(--text-primary); text-overflow:ellipsis; overflow:hidden; white-space:nowrap; max-width:160px; font-weight:500;">${name}</span>
-        <button class="ex-info-btn" style="background:transparent; border:none; color:var(--text-secondary); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; padding: 2px;" onclick="event.stopPropagation(); openExerciseDetail('${name.replace(/'/g, "\\'")}')" title="View details & history">
-          <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-            <circle cx="12" cy="12" r="10"></circle>
-            <line x1="12" y1="16" x2="12" y2="12"></line>
-            <line x1="12" y1="8" x2="12.01" y2="8"></line>
-          </svg>
-        </button>
-      </div>
-      <button class="add-ex-btn" title="Add to Preset" onclick="event.stopPropagation(); addExerciseToPresetBuilderList('${name.replace(/'/g, "\\'")}', event)" style="background:transparent; border:none; color:var(--text-secondary); cursor:pointer; display:flex; align-items:center; justify-content:center; width:20px; height:20px;">
+      <span class="ex-name-link" style="color:var(--text-primary); text-overflow:ellipsis; overflow:hidden; white-space:nowrap; flex:1; font-weight:500;">${name}</span>
+      <button class="ex-info-btn" style="background:transparent; border:none; color:var(--text-secondary); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; padding: 2px; margin-left: 8px; shrink:0;" onclick="event.stopPropagation(); openExerciseDetail('${name.replace(/'/g, "\\'")}')" title="View details & history">
         <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="16" x2="12" y2="12"></line>
+          <line x1="12" y1="8" x2="12.01" y2="8"></line>
         </svg>
       </button>
     `;
@@ -2758,8 +2785,7 @@ window.addExerciseToPresetBuilderList = function(name, event) {
 
   // Flash item to indicate successful add
   if (event && event.currentTarget) {
-    const btn = event.currentTarget;
-    const parent = btn.parentElement;
+    const parent = event.currentTarget.closest('.catalogue-item');
     if (parent) {
       parent.classList.add('flash-success');
       setTimeout(() => {

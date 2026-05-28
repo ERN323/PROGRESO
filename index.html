@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PROGRESO // Premium Workout Tracker & Visualizer</title>
-  <link rel="stylesheet" href="style.css?v=37">
+  <link rel="stylesheet" href="style.css?v=38">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <meta name="theme-color" content="#bd00ff">
@@ -663,68 +663,74 @@
       <h3 class="card-title" id="preset-modal-title">Create Workout Preset</h3>
       
       <div style="overflow-y: auto; flex: 1; padding-right: 4px; margin-bottom: 12px;">
-        <div class="form-group" style="margin-bottom: 14px;">
-          <label for="preset-name-input">Preset Name</label>
-          <input type="text" id="preset-name-input" placeholder="e.g. Legs Blast, Pull Day" style="border-radius: 10px;">
-        </div>
- 
-        <!-- Add Exercises Section -->
-        <div style="border-top: 1px solid var(--card-border); padding-top: 12px; margin-bottom: 14px;">
-          <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">Add Exercises</label>
-          
-          <!-- Category Browser inside Preset Modal -->
-          <div class="preset-catalogue-categories" style="display: flex; gap: 4px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 8px; scrollbar-width: none;">
-            <button class="cat-pill active" id="p-cat-Legs" data-pcat="Legs" style="padding: 4px 10px; font-size: 0.75rem;">Legs</button>
-            <button class="cat-pill" id="p-cat-Chest" data-pcat="Chest" style="padding: 4px 10px; font-size: 0.75rem;">Chest</button>
-            <button class="cat-pill" id="p-cat-Back" data-pcat="Back" style="padding: 4px 10px; font-size: 0.75rem;">Back</button>
-            <button class="cat-pill" id="p-cat-Arms" data-pcat="Arms" style="padding: 4px 10px; font-size: 0.75rem;">Arms</button>
-            <button class="cat-pill" id="p-cat-Shoulders" data-pcat="Shoulders" style="padding: 4px 10px; font-size: 0.75rem;">Shoulders</button>
-            <button class="cat-pill" id="p-cat-Core" data-pcat="Core" style="padding: 4px 10px; font-size: 0.75rem;">Core</button>
-            <button class="cat-pill" id="p-cat-Custom" data-pcat="Custom" style="padding: 4px 10px; font-size: 0.75rem;">Custom</button>
-          </div>
- 
-          <!-- Target sets select for quick add -->
-          <div style="display: flex; gap: 6px; align-items: center; margin-bottom: 8px;">
-            <span style="font-size: 0.8rem; color: var(--text-secondary);">Target sets to add:</span>
-            <input type="number" id="preset-builder-sets-input" placeholder="No." min="1" max="10" value="" style="border-radius: 8px; padding: 6px 10px; font-size: 0.85rem; max-width: 70px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); color: var(--text-primary);">
-          </div>
- 
-          <!-- Categorized exercise list inside Preset Builder -->
-          <div id="preset-catalogue-exercise-list">
-            <!-- Category options -->
-          </div>
-
-          <!-- Add Custom Exercise Sub-Form inside Preset Builder -->
-          <div id="preset-custom-exercise-builder" style="display: none; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--card-border); margin-bottom: 12px;">
-            <div style="display: flex; flex-direction: column; gap: 8px;">
-              <input type="text" id="preset-new-custom-ex-name" placeholder="New custom exercise name..." style="padding: 8px 12px; font-size: 0.85rem; border-radius: 8px; width: 100%;">
-              <div style="display: flex; gap: 6px; width: 100%;">
-                <select id="preset-custom-ex-cat-select" style="padding: 8px 12px; font-size: 0.85rem; border-radius: 8px; flex: 1; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); color: var(--text-primary);">
-                  <option value="Legs">Legs</option>
-                  <option value="Chest">Chest</option>
-                  <option value="Back">Back</option>
-                  <option value="Arms">Arms</option>
-                  <option value="Shoulders">Shoulders</option>
-                  <option value="Core">Core</option>
-                </select>
-                <button class="btn btn-primary" id="preset-save-custom-ex-btn" style="padding: 8px 14px; font-size: 0.85rem; border-radius: 8px;">Save</button>
+        <!-- STEP 1: Exercise Selection -->
+        <div id="preset-builder-step1-container">
+          <!-- Add Exercises Section -->
+          <div style="padding-top: 4px; margin-bottom: 14px;">
+            <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">Add Exercises</label>
+            
+            <!-- Category Browser inside Preset Modal -->
+            <div class="preset-catalogue-categories" style="display: flex; gap: 4px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 8px; scrollbar-width: none;">
+              <button class="cat-pill active" id="p-cat-Legs" data-pcat="Legs" style="padding: 4px 10px; font-size: 0.75rem;">Legs</button>
+              <button class="cat-pill" id="p-cat-Chest" data-pcat="Chest" style="padding: 4px 10px; font-size: 0.75rem;">Chest</button>
+              <button class="cat-pill" id="p-cat-Back" data-pcat="Back" style="padding: 4px 10px; font-size: 0.75rem;">Back</button>
+              <button class="cat-pill" id="p-cat-Arms" data-pcat="Arms" style="padding: 4px 10px; font-size: 0.75rem;">Arms</button>
+              <button class="cat-pill" id="p-cat-Shoulders" data-pcat="Shoulders" style="padding: 4px 10px; font-size: 0.75rem;">Shoulders</button>
+              <button class="cat-pill" id="p-cat-Core" data-pcat="Core" style="padding: 4px 10px; font-size: 0.75rem;">Core</button>
+              <button class="cat-pill" id="p-cat-Custom" data-pcat="Custom" style="padding: 4px 10px; font-size: 0.75rem;">Custom</button>
+            </div>
+   
+            <!-- Target sets select for quick add -->
+            <div style="display: flex; gap: 6px; align-items: center; margin-bottom: 8px;">
+              <span style="font-size: 0.8rem; color: var(--text-secondary);">Target sets to add:</span>
+              <input type="number" id="preset-builder-sets-input" placeholder="No." min="1" max="10" value="" style="border-radius: 8px; padding: 6px 10px; font-size: 0.85rem; max-width: 70px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); color: var(--text-primary);">
+            </div>
+   
+            <!-- Categorized exercise list inside Preset Builder -->
+            <div id="preset-catalogue-exercise-list">
+              <!-- Category options -->
+            </div>
+  
+            <!-- Add Custom Exercise Sub-Form inside Preset Builder -->
+            <div id="preset-custom-exercise-builder" style="display: none; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--card-border); margin-bottom: 12px;">
+              <div style="display: flex; flex-direction: column; gap: 8px;">
+                <input type="text" id="preset-new-custom-ex-name" placeholder="New custom exercise name..." style="padding: 8px 12px; font-size: 0.85rem; border-radius: 8px; width: 100%;">
+                <div style="display: flex; gap: 6px; width: 100%;">
+                  <select id="preset-custom-ex-cat-select" style="padding: 8px 12px; font-size: 0.85rem; border-radius: 8px; flex: 1; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); color: var(--text-primary);">
+                    <option value="Legs">Legs</option>
+                    <option value="Chest">Chest</option>
+                    <option value="Back">Back</option>
+                    <option value="Arms">Arms</option>
+                    <option value="Shoulders">Shoulders</option>
+                    <option value="Core">Core</option>
+                  </select>
+                  <button class="btn btn-primary" id="preset-save-custom-ex-btn" style="padding: 8px 14px; font-size: 0.85rem; border-radius: 8px;">Save</button>
+                </div>
               </div>
             </div>
-          </div>
- 
-          <!-- Or Quick Manual Search Input -->
-          <div style="display: flex; gap: 6px;">
-            <div style="flex: 1;">
-              <input type="text" id="preset-exercise-search" placeholder="Or search exercise..." list="ex-autocomplete" style="border-radius: 8px; padding: 8px 12px; font-size: 0.85rem;">
+   
+            <!-- Or Quick Manual Search Input -->
+            <div style="display: flex; gap: 6px;">
+              <div style="flex: 1;">
+                <input type="text" id="preset-exercise-search" placeholder="Or search exercise..." list="ex-autocomplete" style="border-radius: 8px; padding: 8px 12px; font-size: 0.85rem;">
+              </div>
+              <button class="btn btn-primary" id="preset-add-ex-btn" style="padding: 8px 12px; font-size: 0.85rem; border-radius: 8px;">+ Add</button>
             </div>
-            <button class="btn btn-primary" id="preset-add-ex-btn" style="padding: 8px 12px; font-size: 0.85rem; border-radius: 8px;">+ Add</button>
           </div>
         </div>
- 
-        <div style="margin-bottom: 10px;">
-          <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">Preset Routine Exercises</label>
-          <div id="preset-builder-exercises-list">
-            <p id="preset-builder-empty-msg" style="text-align: center; color: var(--text-secondary); font-size: 0.85rem; padding: 20px 10px;">No exercises added to this routine yet.</p>
+
+        <!-- STEP 2: Name & Review -->
+        <div id="preset-builder-step2-container" style="display: none;">
+          <div class="form-group" style="margin-bottom: 20px;">
+            <label for="preset-name-input">Preset Name</label>
+            <input type="text" id="preset-name-input" placeholder="e.g. Legs Blast, Pull Day" style="border-radius: 10px;">
+          </div>
+   
+          <div style="margin-bottom: 10px;">
+            <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">Preset Routine Exercises</label>
+            <div id="preset-builder-exercises-list">
+              <p id="preset-builder-empty-msg" style="text-align: center; color: var(--text-secondary); font-size: 0.85rem; padding: 20px 10px;">No exercises added to this routine yet.</p>
+            </div>
           </div>
         </div>
       </div>
@@ -747,6 +753,16 @@
           <canvas id="exercise-detail-canvas" width="300" height="220" style="display: block;"></canvas>
           <div id="ex-detail-category-badge" style="position: absolute; bottom: 8px; right: 12px; font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px; background: rgba(0,0,0,0.4); padding: 4px 8px; border-radius: 6px;">
             Category
+          </div>
+        </div>
+        
+        <!-- Muscle and Target Area Tags -->
+        <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: -4px;">
+          <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; display: flex; gap: 4px; align-items: center;">
+            <span style="color: var(--text-secondary);">Muscle:</span> <span id="ex-detail-primary-muscle" style="font-weight: 600; color: var(--accent-color);">—</span>
+          </div>
+          <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; display: flex; gap: 4px; align-items: center;">
+            <span style="color: var(--text-secondary);">Target:</span> <span id="ex-detail-target-area" style="font-weight: 600; color: var(--text-primary);">—</span>
           </div>
         </div>
         
