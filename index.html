@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PROGRESO // Premium Workout Tracker & Visualizer</title>
-  <link rel="stylesheet" href="style.css?v=39">
+  <link rel="stylesheet" href="style.css?v=40">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <meta name="theme-color" content="#bd00ff">
@@ -236,54 +236,33 @@
 
         <!-- STATE 2: EXERCISE PLANNER -->
         <div id="screen-plan-exercises" class="state-screen">
-          <h3 class="card-title">Plan Exercises</h3>
-          <p style="color: var(--text-secondary); margin-bottom: 16px; font-size: 0.85rem;">
-            Add exercises to your active routine using quick search or browsing the catalogue.
-          </p>
+          <h3 class="card-title" id="workout-planner-title">Plan Exercises: Step 1</h3>
           
-          <div style="display: flex; gap: 8px; margin-bottom: 12px;">
-            <div style="flex: 2;">
-              <input type="text" id="plan-ex-name" placeholder="Quick search or type exercise..." list="ex-autocomplete">
-              <datalist id="ex-autocomplete"></datalist>
-            </div>
-            <div style="flex: 1;">
-              <input type="number" id="plan-ex-sets" placeholder="No." min="1" max="10" value="">
-            </div>
-            <button class="btn btn-primary btn-icon" id="plan-add-btn" title="Add Exercise">
-              <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
-              </svg>
-            </button>
-          </div>
-
-          <button class="btn btn-secondary" id="toggle-catalogue-btn" style="width: 100%; padding: 10px; font-size: 0.85rem; border-radius: 10px; margin-bottom: 16px; display: flex; justify-content: center; gap: 6px; align-items: center;">
-            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
-            </svg>
-            Browse Catalogue
-          </button>
-
-          <!-- Categorized Catalogue Drawer (collapsible) -->
-          <div id="catalogue-drawer" class="collapse-container">
-            <div style="background: rgba(255, 255, 255, 0.01); border: 1px solid var(--card-border); border-radius: 12px; padding: 12px; margin-bottom: 16px;">
-              <!-- Categories Tabs -->
-              <div class="catalogue-categories" style="display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 10px; -webkit-overflow-scrolling: touch; scrollbar-width: none;">
-                <button class="cat-pill active" data-category="Legs">Legs</button>
-                <button class="cat-pill" data-category="Chest">Chest</button>
-                <button class="cat-pill" data-category="Back">Back</button>
-                <button class="cat-pill" data-category="Arms">Arms</button>
-                <button class="cat-pill" data-category="Shoulders">Shoulders</button>
-                <button class="cat-pill" data-category="Core">Core</button>
-                <button class="cat-pill" data-category="Custom">Custom</button>
+          <div style="overflow-y: auto; flex: 1; padding-right: 4px; margin-bottom: 12px;">
+            <!-- STEP 1: Exercise Selection -->
+            <div id="workout-planner-step1-container">
+              <p style="color: var(--text-secondary); margin-bottom: 12px; font-size: 0.85rem;">
+                Choose exercises to add to your session.
+              </p>
+              
+              <!-- Catalogue Categories Tabs directly visible -->
+              <div class="catalogue-categories" style="display: flex; gap: 4px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 8px; scrollbar-width: none;">
+                <button class="cat-pill active" data-category="Legs" style="padding: 4px 10px; font-size: 0.75rem;">Legs</button>
+                <button class="cat-pill" data-category="Chest" style="padding: 4px 10px; font-size: 0.75rem;">Chest</button>
+                <button class="cat-pill" data-category="Back" style="padding: 4px 10px; font-size: 0.75rem;">Back</button>
+                <button class="cat-pill" data-category="Arms" style="padding: 4px 10px; font-size: 0.75rem;">Arms</button>
+                <button class="cat-pill" data-category="Shoulders" style="padding: 4px 10px; font-size: 0.75rem;">Shoulders</button>
+                <button class="cat-pill" data-category="Core" style="padding: 4px 10px; font-size: 0.75rem;">Core</button>
+                <button class="cat-pill" data-category="Custom" style="padding: 4px 10px; font-size: 0.75rem;">Custom</button>
               </div>
               
-              <!-- Exercise List inside Drawer -->
-              <div id="catalogue-exercise-list" style="max-height: 160px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding-right: 4px;">
+              <!-- Exercise List directly visible -->
+              <div id="catalogue-exercise-list" style="max-height: 380px; min-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding: 8px; background: rgba(0, 0, 0, 0.2); border-radius: 12px; border: 1px solid var(--card-border); margin-bottom: 12px;">
                 <!-- Dynamically populated -->
               </div>
               
               <!-- Add Custom Exercise Sub-Form -->
-              <div id="custom-exercise-builder" style="display: none; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--card-border);">
+              <div id="custom-exercise-builder" style="display: none; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--card-border); margin-bottom: 12px;">
                 <div style="display: flex; flex-direction: column; gap: 8px;">
                   <input type="text" id="new-custom-ex-name" placeholder="New custom exercise name..." style="padding: 8px 12px; font-size: 0.85rem; border-radius: 8px; width: 100%;">
                   <div style="display: flex; gap: 6px; width: 100%;">
@@ -299,17 +278,33 @@
                   </div>
                 </div>
               </div>
+              
+              <!-- Quick search box -->
+              <div style="display: flex; gap: 6px; margin-bottom: 12px;">
+                <div style="flex: 1;">
+                  <input type="text" id="plan-ex-name" placeholder="Or search exercise..." list="ex-autocomplete" style="border-radius: 8px; padding: 8px 12px; font-size: 0.85rem;">
+                  <datalist id="ex-autocomplete"></datalist>
+                </div>
+                <button class="btn btn-primary" id="plan-add-btn" style="padding: 8px 12px; font-size: 0.85rem; border-radius: 8px;">+ Add</button>
+              </div>
+            </div>
+            
+            <!-- STEP 2: Review Exercises -->
+            <div id="workout-planner-step2-container" style="display: none;">
+              <p style="color: var(--text-secondary); margin-bottom: 12px; font-size: 0.85rem;">
+                Review the exercises for this session.
+              </p>
+              
+              <!-- Planned List -->
+              <div id="planned-list" style="display: flex; flex-direction: column; gap: 8px; min-height: 180px; max-height: 340px; overflow-y: auto; background: rgba(0, 0, 0, 0.25); border-radius: 12px; padding: 10px; border: 1px solid var(--card-border); margin-bottom: 20px;">
+                <p id="empty-plan-msg" style="text-align: center; color: var(--text-secondary); padding: 20px;">No exercises added yet.</p>
+              </div>
             </div>
           </div>
- 
-          <!-- Planned List -->
-          <div id="planned-list" style="margin-bottom: 20px; max-height: 180px; overflow-y: auto;">
-            <p id="empty-plan-msg" style="text-align: center; color: var(--text-secondary); padding: 20px;">No exercises added yet.</p>
-          </div>
- 
-          <div style="display: flex; justify-content: space-between;">
-            <button class="btn btn-secondary" id="cancel-plan-btn">Cancel</button>
-            <button class="btn btn-primary" id="confirm-plan-btn" disabled>Next</button>
+
+          <div style="display: flex; justify-content: space-between; gap: 12px; border-top: 1px solid var(--card-border); padding-top: 16px;">
+            <button class="btn btn-secondary" id="cancel-plan-btn" style="flex: 1;">Cancel</button>
+            <button class="btn btn-primary" id="confirm-plan-btn" style="flex: 1;" disabled>Next</button>
           </div>
         </div>
 

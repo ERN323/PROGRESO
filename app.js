@@ -37,6 +37,8 @@ let presetBuilderExercises = []; // Temp list of { name, plannedSets } in builde
 let activeEditingPresetIndex = null; // null if creating, number if editing
 let presetBuilderStep = 1; // Wizard step tracking
 let presetBuilderConfirmDeleteIndex = null; // Track index displaying inline delete confirmation
+let workoutPlannerStep = 1; // Workout planner wizard step tracking
+let workoutPlannerConfirmDeleteIndex = null; // Track index displaying delete confirmation in planned list
 let activeCatalogueCategory = 'Legs';
 let activeChartMode = 'exercise'; // 'exercise' or 'muscle'
 let activePresetBuilderCategory = 'Legs';
@@ -714,16 +716,10 @@ function setupEventListeners() {
     });
   }
 
-  // Catalogue Drawer Toggle
-  const toggleCatalogueBtn = document.getElementById('toggle-catalogue-btn');
-  if (toggleCatalogueBtn) {
-    toggleCatalogueBtn.addEventListener('click', toggleCatalogueDrawer);
-  }
-
   // Catalogue Categories Tab Pills
-  document.querySelectorAll('.cat-pill').forEach(pill => {
+  document.querySelectorAll('.catalogue-categories .cat-pill').forEach(pill => {
     pill.addEventListener('click', () => {
-      document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.catalogue-categories .cat-pill').forEach(p => p.classList.remove('active'));
       pill.classList.add('active');
       activeCatalogueCategory = pill.dataset.category;
       renderCatalogueExerciseList();
@@ -757,7 +753,11 @@ function setupEventListeners() {
       requestNotificationPermission();
       activeSession.date = getTodayDateString();
       activeSession.exercises = [];
+      workoutPlannerStep = 1; // start at selection for empty
+      workoutPlannerConfirmDeleteIndex = null;
       renderPlannedExercisesList();
+      renderCatalogueExerciseList();
+      updateWorkoutPlannerStepView();
       transitionTo(AppState.PLAN_EXERCISES);
       closeSessionPickerModal();
     });
@@ -774,14 +774,36 @@ function setupEventListeners() {
     if (e.key === 'Enter') addPlannedExercise();
   });
   document.getElementById('cancel-plan-btn').addEventListener('click', () => {
-    transitionTo(AppState.WELCOME);
+    if (workoutPlannerStep === 1) {
+      transitionTo(AppState.WELCOME);
+    } else {
+      workoutPlannerStep = 1;
+      updateWorkoutPlannerStepView();
+    }
   });
   document.getElementById('confirm-plan-btn').addEventListener('click', () => {
-    transitionTo(AppState.PLAN_REST);
+    if (workoutPlannerStep === 1) {
+      if (activeSession.exercises.length === 0) {
+        alert('Please choose at least one exercise.');
+        return;
+      }
+      workoutPlannerStep = 2;
+      updateWorkoutPlannerStepView();
+    } else {
+      if (activeSession.exercises.length === 0) {
+        alert('Please add at least one exercise to the routine.');
+        return;
+      }
+      transitionTo(AppState.PLAN_REST);
+    }
   });
 
   // Rest duration screen
   document.getElementById('back-to-plan-btn').addEventListener('click', () => {
+    workoutPlannerStep = 2;
+    workoutPlannerConfirmDeleteIndex = null;
+    renderPlannedExercisesList();
+    updateWorkoutPlannerStepView();
     transitionTo(AppState.PLAN_EXERCISES);
   });
   document.getElementById('start-workout-btn').addEventListener('click', () => {
@@ -1195,9 +1217,7 @@ function setupEventListeners() {
           presetBuilderExercises.push({ name: exName, plannedSets: 4 });
           renderPresetBuilderExercises();
         } else {
-          const setsInput = document.getElementById('plan-ex-sets');
-          const sets = parseInt(setsInput.value) || 4;
-          activeSession.exercises.push({ name: exName, plannedSets: sets, actualSets: [] });
+          activeSession.exercises.push({ name: exName, plannedSets: 4, actualSets: [] });
           renderPlannedExercisesList();
         }
         
@@ -1229,16 +1249,14 @@ function setupEventListeners() {
 // Planner Screens Implementation
 function addPlannedExercise() {
   const nameInput = document.getElementById('plan-ex-name');
-  const setsInput = document.getElementById('plan-ex-sets');
   
   const name = nameInput.value.trim();
-  const sets = parseInt(setsInput.value) || 4;
   
   if (!name) return;
   
   activeSession.exercises.push({
     name: name,
-    plannedSets: sets,
+    plannedSets: 4,
     actualSets: []
   });
   
@@ -1248,39 +1266,130 @@ function addPlannedExercise() {
   nameInput.focus();
 }
 
-function removePlannedExercise(index) {
-  activeSession.exercises.splice(index, 1);
-  renderPlannedExercisesList();
-}
-
 function renderPlannedExercisesList() {
   const container = document.getElementById('planned-list');
   const confirmBtn = document.getElementById('confirm-plan-btn');
+  if (!container) return;
   container.innerHTML = '';
   
   if (activeSession.exercises.length === 0) {
     container.innerHTML = '<p id="empty-plan-msg" style="text-align: center; color: var(--text-secondary); padding: 20px;">No exercises added yet.</p>';
-    confirmBtn.disabled = true;
+    if (confirmBtn) confirmBtn.disabled = true;
     return;
   }
   
-  confirmBtn.disabled = false;
+  if (confirmBtn) confirmBtn.disabled = false;
+  
   activeSession.exercises.forEach((ex, idx) => {
     const item = document.createElement('div');
     item.className = 'list-item';
+    item.style.display = 'flex';
+    item.style.justifyContent = 'space-between';
+    item.style.alignItems = 'center';
+    item.style.padding = '8px 12px';
+    item.style.background = 'rgba(255,255,255,0.03)';
+    item.style.border = '1px solid rgba(255,255,255,0.06)';
+    item.style.borderRadius = '10px';
+    item.style.marginBottom = '8px';
+    
+    const isConfirming = (idx === workoutPlannerConfirmDeleteIndex);
+    
     item.innerHTML = `
-      <div class="list-item-info">
-        <h4>${ex.name}</h4>
-        <p>${ex.plannedSets} planned sets</p>
+      <div style="flex: 1; min-width: 0; padding-right: 8px;">
+        <h4 style="margin:0; font-size:1rem; font-weight:600; color:var(--text-primary); text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">${ex.name}</h4>
       </div>
-      <button class="btn btn-danger btn-icon" onclick="removePlannedExercise(${idx})" style="width: 32px; height: 32px; border-radius: 8px;">
-        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-        </svg>
-      </button>
+      <div style="display: flex; align-items: center; shrink: 0;">
+        ${isConfirming ? `
+          <span style="color:var(--text-secondary); font-size:0.75rem; margin-right:8px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Remove?</span>
+          <!-- Red cross (deny delete) -->
+          <button class="btn btn-secondary btn-icon" onclick="cancelWorkoutPlannerDelete()" style="width: 28px; height: 28px; border-radius: 6px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-color: rgba(255,255,255,0.15); margin-right: 6px;" title="No, cancel">
+            <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+          <!-- Green check (confirm delete) -->
+          <button class="btn btn-icon" onclick="confirmWorkoutPlannerDelete(${idx})" style="width: 28px; height: 28px; border-radius: 6px; padding: 0; display: inline-flex; align-items: center; justify-content: center; background: #00e676; border: 1px solid #00e676; color: #000;" title="Yes, delete">
+            <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          </button>
+        ` : `
+          <!-- Sets input next to delete button -->
+          <div style="display: flex; align-items: center; margin-right: 12px;">
+            <input type="number" min="1" max="20" class="plan-ex-sets-input" data-idx="${idx}" value="${ex.plannedSets}" style="width: 48px; text-align: center; border-radius: 6px; padding: 4px 6px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); color: var(--text-primary); font-size: 0.85rem; font-weight: 600;">
+            <span style="color:var(--text-secondary); font-size:0.8rem; margin-left:6px;">sets</span>
+          </div>
+          <!-- Trash Can button -->
+          <button class="btn btn-danger btn-icon" onclick="showWorkoutPlannerDeleteConfirm(${idx})" style="width: 28px; height: 28px; border-radius: 6px; padding:0; display: inline-flex; align-items: center; justify-content: center;">
+            <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </button>
+        `}
+      </div>
     `;
+    
+    // Bind change/input listeners for sets input
+    if (!isConfirming) {
+      const input = item.querySelector('.plan-ex-sets-input');
+      if (input) {
+        input.addEventListener('change', (e) => {
+          const val = Math.max(1, parseInt(e.target.value) || 4);
+          activeSession.exercises[idx].plannedSets = val;
+        });
+        input.addEventListener('input', (e) => {
+          const val = Math.max(1, parseInt(e.target.value) || 1);
+          activeSession.exercises[idx].plannedSets = val;
+        });
+      }
+    }
+    
     container.appendChild(item);
   });
+}
+
+// Inline delete confirmation actions for workout planner
+window.showWorkoutPlannerDeleteConfirm = function(idx) {
+  workoutPlannerConfirmDeleteIndex = idx;
+  renderPlannedExercisesList();
+};
+
+window.cancelWorkoutPlannerDelete = function() {
+  workoutPlannerConfirmDeleteIndex = null;
+  renderPlannedExercisesList();
+};
+
+window.confirmWorkoutPlannerDelete = function(idx) {
+  activeSession.exercises.splice(idx, 1);
+  workoutPlannerConfirmDeleteIndex = null;
+  renderPlannedExercisesList();
+};
+
+// Updates the Step display and container visibilities for the Workout Exercise Planner wizard
+function updateWorkoutPlannerStepView() {
+  const step1Container = document.getElementById('workout-planner-step1-container');
+  const step2Container = document.getElementById('workout-planner-step2-container');
+  const titleEl = document.getElementById('workout-planner-title');
+  const cancelBtn = document.getElementById('cancel-plan-btn');
+  const confirmBtn = document.getElementById('confirm-plan-btn');
+  
+  if (!step1Container || !step2Container || !titleEl || !cancelBtn || !confirmBtn) return;
+  
+  if (workoutPlannerStep === 1) {
+    step1Container.style.display = 'block';
+    step2Container.style.display = 'none';
+    titleEl.textContent = 'Plan Exercises: Step 1 (Choose)';
+    cancelBtn.textContent = 'Cancel';
+    confirmBtn.textContent = 'Next';
+    confirmBtn.disabled = false;
+  } else {
+    step1Container.style.display = 'none';
+    step2Container.style.display = 'block';
+    titleEl.textContent = 'Plan Exercises: Step 2 (Review)';
+    cancelBtn.textContent = 'Back';
+    confirmBtn.textContent = 'Next';
+    confirmBtn.disabled = (activeSession.exercises.length === 0);
+  }
 }
 
 // Active Workout Screens Implementation
@@ -2375,7 +2484,10 @@ function loadPresetIntoSession(preset) {
     actualSets: []
   }));
   
+  workoutPlannerStep = 2; // load preset directly to step 2 review
+  workoutPlannerConfirmDeleteIndex = null;
   renderPlannedExercisesList();
+  updateWorkoutPlannerStepView();
   transitionTo(AppState.PLAN_EXERCISES);
 }
 
@@ -2598,30 +2710,7 @@ window.deletePreset = function(index) {
   }
 };
 
-// Toggle the Catalogue Drawer
-function toggleCatalogueDrawer() {
-  const drawer = document.getElementById('catalogue-drawer');
-  const btn = document.getElementById('toggle-catalogue-btn');
-  if (!drawer || !btn) return;
-  
-  const isOpen = drawer.classList.toggle('open');
-  if (isOpen) {
-    btn.innerHTML = `
-      <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" style="margin-right: 6px;">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7"/>
-      </svg>
-      Hide Catalogue
-    `;
-    renderCatalogue();
-  } else {
-    btn.innerHTML = `
-      <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" style="margin-right: 6px;">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
-      </svg>
-      Browse Catalogue
-    `;
-  }
-}
+
 
 // Render the catalogue elements
 function renderCatalogue() {
@@ -2707,12 +2796,9 @@ function renderCatalogueExerciseList() {
 
 // Add exercise from catalogue list directly to planned exercises
 window.addCatalogueExercise = function(name, event) {
-  const setsInput = document.getElementById('plan-ex-sets');
-  const sets = parseInt(setsInput.value) || 4;
-  
   activeSession.exercises.push({
     name: name,
-    plannedSets: sets,
+    plannedSets: 4,
     actualSets: []
   });
   
