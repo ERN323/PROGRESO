@@ -1138,6 +1138,76 @@ function setupEventListeners() {
     isSwipeLock = false;
     isTouchTracked = false;
   }, { passive: true });
+
+  // Detail Modal Event Listeners
+  const exDetailCloseBtn = document.getElementById('ex-detail-close-btn');
+  const exDetailModal = document.getElementById('exercise-detail-modal');
+  if (exDetailCloseBtn && exDetailModal) {
+    exDetailCloseBtn.addEventListener('click', () => {
+      exDetailModal.classList.remove('active');
+      if (activeAnimationId) {
+        cancelAnimationFrame(activeAnimationId);
+        activeAnimationId = null;
+      }
+    });
+    
+    // Close on clicking backdrop
+    exDetailModal.addEventListener('click', (e) => {
+      if (e.target === exDetailModal) {
+        exDetailModal.classList.remove('active');
+        if (activeAnimationId) {
+          cancelAnimationFrame(activeAnimationId);
+          activeAnimationId = null;
+        }
+      }
+    });
+  }
+
+  // Add from Detail modal to current active planner or preset builder
+  const exDetailAddBtn = document.getElementById('ex-detail-add-btn');
+  if (exDetailAddBtn) {
+    exDetailAddBtn.addEventListener('click', () => {
+      const activeModal = document.getElementById('exercise-detail-modal');
+      const exName = document.getElementById('ex-detail-title').textContent;
+      
+      if (activeModal && exName) {
+        // Check if Preset Builder is active
+        const presetModal = document.getElementById('preset-builder-modal');
+        if (presetModal && presetModal.classList.contains('active')) {
+          const setsInput = document.getElementById('preset-builder-sets-input');
+          const sets = parseInt(setsInput.value) || 4;
+          presetBuilderExercises.push({ name: exName, plannedSets: sets });
+          renderPresetBuilderExercises();
+        } else {
+          const setsInput = document.getElementById('plan-ex-sets');
+          const sets = parseInt(setsInput.value) || 4;
+          activeSession.exercises.push({ name: exName, plannedSets: sets, actualSets: [] });
+          renderPlannedExercisesList();
+        }
+        
+        activeModal.classList.remove('active');
+        if (activeAnimationId) {
+          cancelAnimationFrame(activeAnimationId);
+          activeAnimationId = null;
+        }
+      }
+    });
+  }
+
+  // Preset Builder inline Custom Exercise Creator save button
+  const presetSaveCustomExBtn = document.getElementById('preset-save-custom-ex-btn');
+  if (presetSaveCustomExBtn) {
+    presetSaveCustomExBtn.addEventListener('click', savePresetCustomExercise);
+  }
+  const presetNewCustomExName = document.getElementById('preset-new-custom-ex-name');
+  if (presetNewCustomExName) {
+    presetNewCustomExName.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        savePresetCustomExercise();
+      }
+    });
+  }
 }
 
 // Planner Screens Implementation
@@ -2485,15 +2555,30 @@ function renderCatalogueExerciseList() {
     customExercises.forEach((ex, idx) => {
       const item = document.createElement('div');
       item.className = 'catalogue-item';
+      item.style.cursor = 'pointer';
+      item.addEventListener('click', (e) => {
+        if (e.target.closest('.add-ex-btn') || e.target.closest('.btn-danger') || e.target.closest('.ex-info-btn')) return;
+        addCatalogueExercise(ex.name, e);
+      });
+      
       item.innerHTML = `
-        <span>${ex.name} <span style="font-size:0.75rem; color:var(--text-secondary); margin-left:6px;">(${ex.category})</span></span>
+        <div style="display:flex; align-items:center; gap:8px; flex:1; overflow:hidden;">
+          <span class="ex-name-link" style="font-weight:500; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">${ex.name}</span>
+          <button class="ex-info-btn" style="background:transparent; border:none; color:var(--text-secondary); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; padding: 2px;" onclick="event.stopPropagation(); openExerciseDetail('${ex.name.replace(/'/g, "\\'")}')" title="View details & history">
+            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="16" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+          </button>
+        </div>
         <div style="display:flex; gap:10px; align-items:center;">
-          <button class="add-ex-btn" title="Add to Routine" onclick="addCatalogueExercise('${ex.name.replace(/'/g, "\\'")}', event)">
+          <button class="add-ex-btn" title="Add to Routine" onclick="event.stopPropagation(); addCatalogueExercise('${ex.name.replace(/'/g, "\\'")}', event)">
             <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
             </svg>
           </button>
-          <button class="btn btn-danger btn-icon" onclick="deleteCustomExercise(${idx})" style="width:20px; height:20px; border-radius:4px; padding:0; justify-content:center; display:flex; align-items:center;" title="Delete Exercise">
+          <button class="btn btn-danger btn-icon" onclick="event.stopPropagation(); deleteCustomExercise(${idx})" style="width:20px; height:20px; border-radius:4px; padding:0; justify-content:center; display:flex; align-items:center;" title="Delete Exercise">
             <svg width="10" height="10" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
               <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
             </svg>
@@ -2509,9 +2594,24 @@ function renderCatalogueExerciseList() {
     exercises.forEach(ex => {
       const item = document.createElement('div');
       item.className = 'catalogue-item';
+      item.style.cursor = 'pointer';
+      item.addEventListener('click', (e) => {
+        if (e.target.closest('.add-ex-btn') || e.target.closest('.ex-info-btn')) return;
+        addCatalogueExercise(ex, e);
+      });
+      
       item.innerHTML = `
-        <span>${ex}</span>
-        <button class="add-ex-btn" title="Add to Routine" onclick="addCatalogueExercise('${ex.replace(/'/g, "\\'")}', event)">
+        <div style="display:flex; align-items:center; gap:8px; flex:1; overflow:hidden;">
+          <span class="ex-name-link" style="font-weight:500; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">${ex}</span>
+          <button class="ex-info-btn" style="background:transparent; border:none; color:var(--text-secondary); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; padding: 2px;" onclick="event.stopPropagation(); openExerciseDetail('${ex.replace(/'/g, "\\'")}')" title="View details & history">
+            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="16" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+          </button>
+        </div>
+        <button class="add-ex-btn" title="Add to Routine" onclick="event.stopPropagation(); addCatalogueExercise('${ex.replace(/'/g, "\\'")}', event)">
           <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
           </svg>
@@ -2589,13 +2689,16 @@ function saveCustomExercise() {
 // Render the exercises catalogue list inside the preset builder modal
 function renderPresetBuilderCatalogue() {
   const container = document.getElementById('preset-catalogue-exercise-list');
+  const customForm = document.getElementById('preset-custom-exercise-builder');
   if (!container) return;
   container.innerHTML = '';
   
   let exercises = [];
   if (activePresetBuilderCategory === 'Custom') {
+    if (customForm) customForm.style.display = 'block';
     exercises = customExercises.map(ex => ex.name);
   } else {
+    if (customForm) customForm.style.display = 'none';
     exercises = DEFAULT_CATALOGUE[activePresetBuilderCategory] || [];
   }
   
@@ -2606,20 +2709,36 @@ function renderPresetBuilderCatalogue() {
   
   exercises.forEach(name => {
     const item = document.createElement('div');
+    item.className = 'catalogue-item';
     item.style.display = 'flex';
     item.style.justifyContent = 'space-between';
     item.style.alignItems = 'center';
-    item.style.padding = '4px 6px';
-    item.style.borderRadius = '4px';
-    item.style.fontSize = '0.8rem';
+    item.style.padding = '6px 8px';
+    item.style.borderRadius = '6px';
+    item.style.fontSize = '0.85rem';
     item.style.background = 'rgba(255, 255, 255, 0.02)';
     item.style.border = '1px solid rgba(255, 255, 255, 0.04)';
     item.style.marginBottom = '4px';
     item.style.transition = 'all 0.15s';
+    item.style.cursor = 'pointer';
+    
+    item.addEventListener('click', (e) => {
+      if (e.target.closest('.add-ex-btn') || e.target.closest('.ex-info-btn')) return;
+      addExerciseToPresetBuilderList(name, e);
+    });
     
     item.innerHTML = `
-      <span style="color:var(--text-primary); text-overflow:ellipsis; overflow:hidden; white-space:nowrap; max-width:180px;">${name}</span>
-      <button class="add-ex-btn" title="Add to Preset" onclick="addExerciseToPresetBuilderList('${name.replace(/'/g, "\\'")}', event)" style="background:transparent; border:none; color:var(--text-secondary); cursor:pointer; display:flex; align-items:center; justify-content:center; width:20px; height:20px;">
+      <div style="display:flex; align-items:center; gap:6px; flex:1; overflow:hidden;">
+        <span class="ex-name-link" style="color:var(--text-primary); text-overflow:ellipsis; overflow:hidden; white-space:nowrap; max-width:160px; font-weight:500;">${name}</span>
+        <button class="ex-info-btn" style="background:transparent; border:none; color:var(--text-secondary); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; padding: 2px;" onclick="event.stopPropagation(); openExerciseDetail('${name.replace(/'/g, "\\'")}')" title="View details & history">
+          <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="16" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+          </svg>
+        </button>
+      </div>
+      <button class="add-ex-btn" title="Add to Preset" onclick="event.stopPropagation(); addExerciseToPresetBuilderList('${name.replace(/'/g, "\\'")}', event)" style="background:transparent; border:none; color:var(--text-secondary); cursor:pointer; display:flex; align-items:center; justify-content:center; width:20px; height:20px;">
         <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
           <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
         </svg>
@@ -3712,4 +3831,872 @@ window.onGoogleLibraryLoad = function() {
   console.log('[PROGRESO] Google GIS Library loaded.');
   initGoogleAuthSync();
 };
+
+// ==========================================
+// EXERCISE DETAIL, BIO-GRAPHICS & STATISTICS
+// ==========================================
+
+const EXERCISE_DETAILS = {
+  // Legs
+  'Squats': {
+    instructions: '1. Position barbell on your upper back, gripping it firmly.\n2. Stand with feet shoulder-width apart, toes pointed slightly out.\n3. Lower your hips by bending knees until your thighs are parallel to the floor (or lower).\n4. Drive back up to the starting position, keeping your core braced and chest tall.',
+    primary: 'Quadriceps, Gluteus Maximus',
+    area: 'Lower Body',
+    animationType: 'SQUAT'
+  },
+  'Romanian Deadlifts': {
+    instructions: '1. Hold a barbell or dumbbells at hip height.\n2. Keep your back flat and hinge at the hips, pushing them straight back.\n3. Lower the weight along your shins until you feel a deep stretch in your hamstrings.\n4. Squeeze your glutes and hamstrings to stand back up.',
+    primary: 'Hamstrings, Gluteus Maximus',
+    area: 'Lower Body',
+    animationType: 'SQUAT'
+  },
+  'Leg Extensions': {
+    instructions: '1. Sit in the machine with shins behind the roller pad.\n2. Extend legs fully, squeezing your quadriceps at the top of the motion.\n3. Pause briefly, then slowly lower the weights back to the start.',
+    primary: 'Quadriceps',
+    area: 'Lower Body',
+    animationType: 'SQUAT'
+  },
+  'Leg Curls': {
+    instructions: '1. Lie or sit on the machine with roller pad against lower calves.\n2. Bend knees to curl pad towards your glutes, squeezing your hamstrings.\n3. Pause, then slowly return to the starting position.',
+    primary: 'Hamstrings',
+    area: 'Lower Body',
+    animationType: 'SQUAT'
+  },
+  'Calf Raises': {
+    instructions: '1. Place balls of feet on platform, heels hanging off.\n2. Press up through your toes, raising heels as high as possible.\n3. Pause at the top, then slowly lower heels below platform level.',
+    primary: 'Gastrocnemius, Soleus (Calves)',
+    area: 'Lower Body',
+    animationType: 'SQUAT'
+  },
+  'Lunges': {
+    instructions: '1. Step forward with one leg, keeping your feet hip-width apart.\n2. Lower your hips until your back knee is near the floor and front thigh is parallel to the ground.\n3. Push off your front foot to return to the starting position.',
+    primary: 'Quadriceps, Glutes',
+    area: 'Lower Body',
+    animationType: 'SQUAT'
+  },
+  'Bulgarian Split Squats': {
+    instructions: '1. Place your back foot on a bench behind you, standing on your front leg.\n2. Lower your hips until your front thigh is parallel to the floor.\n3. Press back up through your front heel, focusing the effort on the front leg.',
+    primary: 'Quadriceps, Glutes',
+    area: 'Lower Body',
+    animationType: 'SQUAT'
+  },
+  // Chest
+  'Barbell Bench Press': {
+    instructions: '1. Lie flat on bench, grip barbell slightly wider than shoulder width.\n2. Lower bar under control to mid-chest level.\n3. Press the bar vertically until your arms are fully extended.',
+    primary: 'Pectoralis Major (Chest)',
+    area: 'Upper Body',
+    animationType: 'BENCH_PRESS'
+  },
+  'Dumbbell Bench Press': {
+    instructions: '1. Lie on bench holding dumbbells at chest level with neutral or overhand grip.\n2. Press dumbbells vertically until arms are extended.\n3. Lower weights under control to chest level.',
+    primary: 'Pectoralis Major (Chest)',
+    area: 'Upper Body',
+    animationType: 'BENCH_PRESS'
+  },
+  'Incline Dumbbell Press': {
+    instructions: '1. Set bench to 30-45 degree incline.\n2. Hold dumbbells at shoulders and press upward over your upper chest.\n3. Lower slowly back to the starting position.',
+    primary: 'Upper Pectorals, Anterior Deltoids',
+    area: 'Upper Body',
+    animationType: 'BENCH_PRESS'
+  },
+  'Chest Flyes': {
+    instructions: '1. Lie on bench holding dumbbells above chest, elbows slightly bent.\n2. Lower weights in a wide arc until a stretch is felt in your chest.\n3. Squeeze chest to pull dumbbells back to the start, keeping elbow angle locked.',
+    primary: 'Pectoralis Major (Chest)',
+    area: 'Upper Body',
+    animationType: 'BENCH_PRESS'
+  },
+  'Push-ups': {
+    instructions: '1. Place hands shoulder-width apart in a plank position.\n2. Lower your body in a straight line until your chest nearly touches the floor.\n3. Press back up to the start, keeping your core braced and hips level.',
+    primary: 'Pectoralis Major, Triceps',
+    area: 'Upper Body',
+    animationType: 'BENCH_PRESS'
+  },
+  'Dips': {
+    instructions: '1. Support body weight on dip bars with straight arms.\n2. Lower your body by bending elbows until upper arms are parallel to the floor.\n3. Press back up to lock out, keeping torso leaning slightly forward for chest focus.',
+    primary: 'Pectoralis Major, Triceps, Shoulders',
+    area: 'Upper Body',
+    animationType: 'BENCH_PRESS'
+  },
+  // Back
+  'Barbell Rows': {
+    instructions: '1. Grip barbell with overhand grip, hinge forward at hips with flat back.\n2. Pull barbell up to your lower chest/upper stomach, drawing elbows back.\n3. Squeeze shoulder blades, then lower under control.',
+    primary: 'Latissimus Dorsi (Lats), Rhomboids',
+    area: 'Upper Body',
+    animationType: 'ROW'
+  },
+  'Pull-ups': {
+    instructions: '1. Hang from bar with palms facing away from you (overhand grip).\n2. Pull your chest up to the bar, leading with your chest and keeping elbows down.\n3. Slowly lower back down to a full hang.',
+    primary: 'Latissimus Dorsi (Lats), Upper Back',
+    area: 'Upper Body',
+    animationType: 'ROW'
+  },
+  'Lat Pulldowns': {
+    instructions: '1. Sit at machine, pull bar down to upper chest level.\n2. Keep elbows aligned under the bar, pulling them down toward your ribs.\n3. Control the weight back up to a full arm extension.',
+    primary: 'Latissimus Dorsi (Lats)',
+    area: 'Upper Body',
+    animationType: 'ROW'
+  },
+  'Seated Cable Rows': {
+    instructions: '1. Sit with feet on platform, knees slightly bent. Hold handle.\n2. Pull handle to midsection, keeping spine straight and squeezing back.\n3. Extend arms fully, feeling a stretch in your lat muscles.',
+    primary: 'Latissimus Dorsi (Lats), Rhomboids',
+    area: 'Upper Body',
+    animationType: 'ROW'
+  },
+  'Deadlifts': {
+    instructions: '1. Stand with mid-foot under barbell. Bend at hips and knees, grip bar.\n2. Keep back flat, chest up, and drive through heels to pull the bar up along your legs.\n3. Stand tall, squeezing glutes at lockout. Return bar close to legs.',
+    primary: 'Erector Spinae (Lower Back), Hamstrings, Glutes',
+    area: 'Full Body',
+    animationType: 'ROW'
+  },
+  'Face Pulls': {
+    instructions: '1. Hold rope attachment with thumbs facing backwards.\n2. Pull rope to forehead/ears, flaring elbows out and squeezing rear delts.\n3. Return under control.',
+    primary: 'Rear Deltoids, Trapezius',
+    area: 'Upper Body',
+    animationType: 'ROW'
+  },
+  // Arms
+  'Bicep Curls': {
+    instructions: '1. Hold dumbbells at sides, palms facing forward. Keep elbows pinned to ribs.\n2. Curl weights up towards shoulders, contracting your biceps.\n3. Pause, then lower weights slowly back to the starting position.',
+    primary: 'Biceps Brachii',
+    area: 'Upper Body',
+    animationType: 'CURL'
+  },
+  'Hammer Curls': {
+    instructions: '1. Hold dumbbells at sides with neutral grip (palms facing each other).\n2. Curl weights up while keeping palms facing in.\n3. Squeeze forearm and bicep muscles, then lower under control.',
+    primary: 'Brachialis, Biceps Brachii',
+    area: 'Upper Body',
+    animationType: 'CURL'
+  },
+  'Tricep Pushdowns': {
+    instructions: '1. Hold cable attachment at chest level, elbows pinned to your sides.\n2. Press bar/rope down until arms are locked out. Squeeze triceps.\n3. Return slowly to upper chest level without moving elbows.',
+    primary: 'Triceps Brachii',
+    area: 'Upper Body',
+    animationType: 'TRICEP'
+  },
+  'Overhead Tricep Extensions': {
+    instructions: '1. Hold dumbbell or cable attachment overhead with straight arms.\n2. Lower the weight behind your head by bending only at the elbows.\n3. Press the weight back up to lock out, contracting your triceps.',
+    primary: 'Triceps Brachii',
+    area: 'Upper Body',
+    animationType: 'TRICEP'
+  },
+  'Chin-ups': {
+    instructions: '1. Hang from bar with underhand grip (palms facing you) shoulder-width apart.\n2. Pull chest to the bar, keeping core braced.\n3. Lower under control to a dead hang.',
+    primary: 'Biceps Brachii, Latissimus Dorsi',
+    area: 'Upper Body',
+    animationType: 'ROW'
+  },
+  // Shoulders
+  'Overhead Shoulder Press': {
+    instructions: '1. Hold barbell or dumbbells at shoulder height, standing tall.\n2. Press the weight vertically overhead until your arms are fully locked.\n3. Lower under control back to shoulder level.',
+    primary: 'Anterior Deltoids, Triceps',
+    area: 'Upper Body',
+    animationType: 'PRESS'
+  },
+  'Lateral Raises': {
+    instructions: '1. Hold dumbbells at sides, lean slightly forward.\n2. Raise arms out to the sides until they are parallel to the floor, leading with elbows.\n3. Lower weights slowly back to starting position.',
+    primary: 'Lateral Deltoids (Side Shoulders)',
+    area: 'Upper Body',
+    animationType: 'PRESS'
+  },
+  'Front Raises': {
+    instructions: '1. Hold dumbbells in front of thighs.\n2. Raise weights straight forward until arms are parallel to the floor.\n3. Lower under control, keeping arms straight.',
+    primary: 'Anterior Deltoids (Front Shoulders)',
+    area: 'Upper Body',
+    animationType: 'PRESS'
+  },
+  'Rear Delt Flyes': {
+    instructions: '1. Hinge forward at hips, back flat. Hold dumbbells below chest.\n2. Raise dumbbells out to the sides, leading with elbows and squeezing rear deltoids.\n3. Lower weights slowly back to start.',
+    primary: 'Rear Deltoids, Trapezius',
+    area: 'Upper Body',
+    animationType: 'ROW'
+  },
+  // Core
+  'Planks': {
+    instructions: '1. Support body weight on forearms and toes.\n2. Keep your body in a straight line from head to heels.\n3. Brace your core and glutes tightly, holding the position for time.',
+    primary: 'Rectus Abdominis, Transverse Abdominis',
+    area: 'Core',
+    animationType: 'CRUNCH'
+  },
+  'Crunches': {
+    instructions: '1. Lie on your back with knees bent, feet flat on the floor.\n2. Place hands lightly behind head or crossed on chest.\n3. Contract your abdominal muscles to lift your shoulders off the floor. Lower slowly.',
+    primary: 'Rectus Abdominis (Abs)',
+    area: 'Core',
+    animationType: 'CRUNCH'
+  },
+  'Hanging Leg Raises': {
+    instructions: '1. Hang from a bar with straight arms.\n2. Keep legs straight and raise them until they are parallel to the floor (or bend knees to chest).\n3. Lower under control, avoiding any swinging.',
+    primary: 'Rectus Abdominis, Iliopsoas (Hip Flexors)',
+    area: 'Core',
+    animationType: 'CRUNCH'
+  },
+  'Halos': {
+    instructions: '1. Hold a dumbbell or kettlebell upside down at chest height.\n2. Circle the weight around your head, keeping it close to your neck.\n3. Complete the circle and reverse direction, keeping core braced.',
+    primary: 'Core, Shoulders',
+    area: 'Core',
+    animationType: 'CRUNCH'
+  },
+  'Russian Twists': {
+    instructions: '1. Sit on floor, knees bent, leaning back slightly, feet elevated.\n2. Hold weight at chest, twist your torso side to side.\n3. Touch the weight or hands to the floor on each side under control.',
+    primary: 'Obliques, Rectus Abdominis',
+    area: 'Core',
+    animationType: 'CRUNCH'
+  }
+};
+
+let activeAnimationId = null;
+
+// Opens the exercise detail modal and loads instructions, stats, and historical logs
+window.openExerciseDetail = function(exerciseName) {
+  const modal = document.getElementById('exercise-detail-modal');
+  const titleEl = document.getElementById('ex-detail-title');
+  const categoryEl = document.getElementById('ex-detail-category-badge');
+  const instructionsEl = document.getElementById('ex-detail-instructions');
+  const maxWeightEl = document.getElementById('ex-detail-max-weight');
+  const maxOneRmEl = document.getElementById('ex-detail-max-onerm');
+  const historyContainer = document.getElementById('ex-detail-history');
+  
+  if (!modal || !titleEl || !categoryEl || !instructionsEl) return;
+  
+  titleEl.textContent = exerciseName;
+  
+  const category = getExerciseCategory(exerciseName);
+  categoryEl.textContent = category;
+  
+  // Set instructions
+  const detail = EXERCISE_DETAILS[exerciseName];
+  if (detail) {
+    instructionsEl.textContent = detail.instructions;
+    document.getElementById('ex-detail-primary-muscle').textContent = detail.primary;
+    document.getElementById('ex-detail-target-area').textContent = detail.area;
+  } else {
+    // Custom exercise default text
+    instructionsEl.textContent = "1. Maintain proper form and control throughout the entire movement.\n2. Work through a full range of motion, focusing on the target muscle group.\n3. Keep your core braced and breathe out on exertion.";
+    document.getElementById('ex-detail-primary-muscle').textContent = category;
+    document.getElementById('ex-detail-target-area').textContent = category === 'Legs' ? 'Lower Body' : 'Upper Body';
+  }
+  
+  // Query stats & history
+  let maxWeight = 0;
+  let max1RM = 0;
+  const matchLogs = [];
+  
+  logsData.forEach(row => {
+    if (row['Name of Exercise'] && row['Name of Exercise'].toLowerCase() === exerciseName.toLowerCase()) {
+      matchLogs.push(row);
+      
+      let setIdx = 1;
+      while (true) {
+        const kgKey = `${setIdx} (kg)`;
+        const repsKey = `${setIdx} (reps)`;
+        if (row[kgKey] === undefined && row[repsKey] === undefined && setIdx > 4) break;
+        
+        const kgVal = parseFloat(row[kgKey]) || 0;
+        const repsVal = row[repsKey] || '';
+        const repsInt = parseInt(String(repsVal).match(/\d+/)) || 0;
+        
+        if (kgVal > maxWeight) {
+          maxWeight = kgVal;
+        }
+        if (repsInt > 0) {
+          const onerm = calculateOneRepMax(kgVal, repsVal);
+          if (onerm > max1RM) {
+            max1RM = onerm;
+          }
+        }
+        setIdx++;
+      }
+    }
+  });
+  
+  // Update stats display
+  maxWeightEl.textContent = maxWeight > 0 ? `${maxWeight} kg` : '—';
+  maxOneRmEl.textContent = max1RM > 0 ? `${Math.round(max1RM * 10) / 10} kg` : '—';
+  
+  // Populate recent history (last 3 entries)
+  historyContainer.innerHTML = '';
+  const recentLogs = matchLogs.slice(-3).reverse();
+  
+  if (recentLogs.length === 0) {
+    historyContainer.innerHTML = '<p style="text-align: center; color: var(--text-secondary); font-size: 0.85rem; padding: 10px; margin: 0;">No workout logs for this exercise yet.</p>';
+  } else {
+    recentLogs.forEach(row => {
+      const item = document.createElement('div');
+      item.className = 'detail-history-item';
+      
+      // format sets reps
+      const setStrings = [];
+      for (let s = 1; s <= 10; s++) {
+        const kg = row[`${s} (kg)`];
+        const reps = row[`${s} (reps)`];
+        if (reps !== undefined && reps !== '') {
+          if (kg !== undefined && kg !== '' && kg !== '0') {
+            setStrings.push(`${kg}kg×${reps}`);
+          } else {
+            setStrings.push(`${reps}r`);
+          }
+        }
+      }
+      
+      item.innerHTML = `
+        <span class="detail-history-date">${row['Date']}</span>
+        <span class="detail-history-sets">${setStrings.join(', ')}</span>
+      `;
+      historyContainer.appendChild(item);
+    });
+  }
+  
+  // Show modal
+  modal.classList.add('active');
+  
+  // Start animation loop
+  startExerciseAnimation(exerciseName, category);
+};
+
+// Starts the dynamic procedural 2D canvas skeleton animation loop
+function startExerciseAnimation(exerciseName, category) {
+  const canvas = document.getElementById('exercise-detail-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  
+  if (activeAnimationId) {
+    cancelAnimationFrame(activeAnimationId);
+    activeAnimationId = null;
+  }
+  
+  const normalizedCategory = (category || 'Core').trim();
+  
+  // Map standard exercises to animations
+  let animationType = 'SQUAT';
+  const detail = EXERCISE_DETAILS[exerciseName];
+  if (detail && detail.animationType) {
+    animationType = detail.animationType;
+  } else {
+    if (normalizedCategory === 'Legs') animationType = 'SQUAT';
+    else if (normalizedCategory === 'Chest') animationType = 'BENCH_PRESS';
+    else if (normalizedCategory === 'Back') animationType = 'ROW';
+    else if (normalizedCategory === 'Arms') {
+      if (exerciseName.toLowerCase().includes('tricep')) {
+        animationType = 'TRICEP';
+      } else {
+        animationType = 'CURL';
+      }
+    } else if (normalizedCategory === 'Shoulders') {
+      animationType = 'PRESS';
+    } else {
+      animationType = 'CRUNCH';
+    }
+  }
+
+  let startTime = Date.now();
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Get colors from CSS variables dynamically
+    const bodyStyles = getComputedStyle(document.body);
+    const accentColor = bodyStyles.getPropertyValue('--accent-color').trim() || '#bd00ff';
+    const accentGlow = bodyStyles.getPropertyValue('--accent-glow').trim() || 'rgba(189, 0, 255, 0.4)';
+    
+    // Draw glowing grid background
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.02)';
+    ctx.lineWidth = 1;
+    ctx.shadowBlur = 0;
+    ctx.beginPath();
+    for (let x = 30; x < canvas.width; x += 30) {
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, canvas.height);
+    }
+    for (let y = 30; y < canvas.height; y += 30) {
+      ctx.moveTo(0, y);
+      ctx.lineTo(canvas.width, y);
+    }
+    ctx.stroke();
+    
+    // Ground floor line
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+    ctx.beginPath();
+    ctx.moveTo(15, 202);
+    ctx.lineTo(canvas.width - 15, 202);
+    ctx.stroke();
+    
+    // Math Phase
+    const elapsed = (Date.now() - startTime) / 1000;
+    const speed = 2.4;
+    const t = elapsed * speed;
+    const phase = (Math.sin(t) + 1) / 2; // cycles 0 to 1
+    
+    // Line Styles
+    ctx.shadowColor = accentColor;
+    ctx.shadowBlur = 10;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    
+    if (animationType === 'SQUAT') {
+      const ankle = { x: 140, y: 198 };
+      const knee = { x: 140 + phase * 32, y: 160 + phase * 4 };
+      const hip = { x: 135 - phase * 30, y: 118 + phase * 42 };
+      const shoulder = { x: 140 - phase * 22, y: 72 + phase * 42 };
+      const neck = { x: shoulder.x + 4, y: shoulder.y - 12 };
+      const head = { x: neck.x + 2, y: neck.y - 14 };
+      const elbow = { x: shoulder.x + 25 - phase * 5, y: shoulder.y + 12 - phase * 10 };
+      const wrist = { x: elbow.x + 20 + phase * 5, y: elbow.y - 3 };
+      
+      // Draw background limbs
+      const lAnkle = { x: ankle.x - 12, y: ankle.y };
+      const lKnee = { x: knee.x - 12, y: knee.y };
+      const lHip = { x: hip.x - 12, y: hip.y };
+      drawSkeletonLine(ctx, lAnkle, lKnee, 'rgba(255,255,255,0.15)', 2);
+      drawSkeletonLine(ctx, lKnee, lHip, 'rgba(255,255,255,0.15)', 2);
+      
+      const lShoulder = { x: shoulder.x - 8, y: shoulder.y };
+      const lElbow = { x: elbow.x - 8, y: elbow.y };
+      const lWrist = { x: wrist.x - 8, y: wrist.y };
+      drawSkeletonLine(ctx, lShoulder, lElbow, 'rgba(255,255,255,0.12)', 2);
+      drawSkeletonLine(ctx, lElbow, lWrist, 'rgba(255,255,255,0.12)', 2);
+      
+      // Muscle highlight: Quads & Glutes
+      ctx.shadowBlur = 18;
+      drawMuscleCapsule(ctx, hip, knee, 11, accentGlow);
+      ctx.fillStyle = accentGlow;
+      ctx.beginPath();
+      ctx.arc(hip.x - 8, hip.y + 4, 11 + phase * 2, 0, 2 * Math.PI);
+      ctx.fill();
+      
+      // Draw foreground skeleton
+      ctx.shadowBlur = 10;
+      drawSkeletonLine(ctx, ankle, knee, accentColor, 3);
+      drawSkeletonLine(ctx, knee, hip, accentColor, 3);
+      drawSkeletonLine(ctx, hip, shoulder, accentColor, 3);
+      drawSkeletonLine(ctx, shoulder, neck, accentColor, 3);
+      drawSkeletonLine(ctx, shoulder, elbow, accentColor, 2.5);
+      drawSkeletonLine(ctx, elbow, wrist, accentColor, 2.5);
+      
+      // Head
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(head.x, head.y, 8, 0, 2 * Math.PI);
+      ctx.fill();
+      ctx.strokeStyle = accentColor;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      
+      // Joints
+      drawJointNode(ctx, ankle, accentColor, 3.5);
+      drawJointNode(ctx, knee, accentColor, 3.5);
+      drawJointNode(ctx, hip, accentColor, 3.5);
+      drawJointNode(ctx, shoulder, accentColor, 3);
+      
+    } else if (animationType === 'BENCH_PRESS') {
+      const benchY = 160;
+      const hip = { x: 120, y: benchY };
+      const shoulder = { x: 180, y: benchY };
+      const neck = { x: 195, y: benchY };
+      const head = { x: 210, y: benchY };
+      const knee = { x: 105, y: benchY + 25 };
+      const foot = { x: 112, y: benchY + 42 };
+      
+      const wrist = { x: 180, y: 135 - phase * 40 };
+      const elbow = { x: 165 + phase * 15, y: 175 - phase * 40 };
+      
+      // Draw bench support
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+      ctx.lineWidth = 3.5;
+      ctx.beginPath();
+      ctx.moveTo(90, benchY + 6);
+      ctx.lineTo(210, benchY + 6);
+      ctx.moveTo(150, benchY + 6);
+      ctx.lineTo(150, 202);
+      ctx.stroke();
+      
+      // Muscle highlight: Pectorals
+      ctx.shadowBlur = 18;
+      const chestPos = { x: (shoulder.x + hip.x) / 2 + 12, y: shoulder.y - 12 };
+      ctx.fillStyle = accentGlow;
+      ctx.beginPath();
+      ctx.arc(chestPos.x, chestPos.y, 11 + phase * 2, 0, 2 * Math.PI);
+      ctx.fill();
+      
+      // Draw skeleton
+      ctx.shadowBlur = 10;
+      drawSkeletonLine(ctx, foot, knee, 'rgba(255,255,255,0.22)', 2);
+      drawSkeletonLine(ctx, knee, hip, 'rgba(255,255,255,0.22)', 2);
+      drawSkeletonLine(ctx, hip, shoulder, accentColor, 3);
+      drawSkeletonLine(ctx, shoulder, neck, accentColor, 3);
+      drawSkeletonLine(ctx, shoulder, elbow, accentColor, 2.5);
+      drawSkeletonLine(ctx, elbow, wrist, accentColor, 2.5);
+      
+      // Head
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(head.x, head.y, 8, 0, 2 * Math.PI);
+      ctx.fill();
+      ctx.strokeStyle = accentColor;
+      ctx.stroke();
+      
+      // Barbell end cross section and plate
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.arc(wrist.x, wrist.y, 4, 0, 2 * Math.PI);
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+      ctx.stroke();
+      
+      ctx.fillStyle = accentColor;
+      ctx.beginPath();
+      ctx.rect(wrist.x - 3, wrist.y - 15, 6, 30);
+      ctx.fill();
+      
+      drawJointNode(ctx, hip, accentColor, 3.5);
+      drawJointNode(ctx, shoulder, accentColor, 3.5);
+      drawJointNode(ctx, elbow, accentColor, 3);
+      
+    } else if (animationType === 'ROW') {
+      const foot = { x: 130, y: 198 };
+      const knee = { x: 122, y: 170 };
+      const hip = { x: 110, y: 138 };
+      const shoulder = { x: 165, y: 112 };
+      const neck = { x: 176, y: 104 };
+      const head = { x: 188, y: 96 };
+      
+      const wrist = { x: 165 - phase * 23, y: 165 - phase * 43 };
+      const elbow = { x: 145 - phase * 27, y: 145 - phase * 37 };
+      
+      // Muscle highlight: Back/Lats
+      ctx.shadowBlur = 18;
+      drawMuscleCapsule(ctx, hip, shoulder, 10, accentGlow);
+      
+      // Draw skeleton
+      ctx.shadowBlur = 10;
+      drawSkeletonLine(ctx, foot, knee, accentColor, 3);
+      drawSkeletonLine(ctx, knee, hip, accentColor, 3);
+      drawSkeletonLine(ctx, hip, shoulder, accentColor, 3);
+      drawSkeletonLine(ctx, shoulder, neck, accentColor, 3);
+      drawSkeletonLine(ctx, shoulder, elbow, accentColor, 2.5);
+      drawSkeletonLine(ctx, elbow, wrist, accentColor, 2.5);
+      
+      // Head
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(head.x, head.y, 8, 0, 2 * Math.PI);
+      ctx.fill();
+      ctx.strokeStyle = accentColor;
+      ctx.stroke();
+      
+      // Barbell weight plate
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.fillStyle = accentColor;
+      ctx.beginPath();
+      ctx.arc(wrist.x, wrist.y, 11, 0, 2 * Math.PI);
+      ctx.fill();
+      ctx.stroke();
+      
+      drawJointNode(ctx, foot, accentColor, 3.5);
+      drawJointNode(ctx, knee, accentColor, 3.5);
+      drawJointNode(ctx, hip, accentColor, 3.5);
+      drawJointNode(ctx, shoulder, accentColor, 3.5);
+      drawJointNode(ctx, elbow, accentColor, 3);
+      
+    } else if (animationType === 'CURL') {
+      const foot = { x: 150, y: 198 };
+      const knee = { x: 150, y: 162 };
+      const hip = { x: 150, y: 126 };
+      const shoulder = { x: 150, y: 78 };
+      const neck = { x: 150, y: 66 };
+      const head = { x: 150, y: 50 };
+      const elbow = { x: 150, y: 108 };
+      const wrist = { x: 150 + phase * 22, y: 140 - phase * 54 };
+      
+      // Muscle highlight: Biceps (swelling)
+      ctx.shadowBlur = 18;
+      const bicepWidth = 7.5 + phase * 5;
+      drawMuscleCapsule(ctx, shoulder, elbow, bicepWidth, accentGlow);
+      
+      // Draw skeleton
+      ctx.shadowBlur = 10;
+      drawSkeletonLine(ctx, foot, knee, accentColor, 3);
+      drawSkeletonLine(ctx, knee, hip, accentColor, 3);
+      drawSkeletonLine(ctx, hip, shoulder, accentColor, 3);
+      drawSkeletonLine(ctx, shoulder, neck, accentColor, 3);
+      drawSkeletonLine(ctx, shoulder, elbow, accentColor, 2.5);
+      drawSkeletonLine(ctx, elbow, wrist, accentColor, 2.5);
+      
+      // Head
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(head.x, head.y, 8, 0, 2 * Math.PI);
+      ctx.fill();
+      ctx.strokeStyle = accentColor;
+      ctx.stroke();
+      
+      // Dumbbell
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(wrist.x - 10, wrist.y - 4);
+      ctx.lineTo(wrist.x + 10, wrist.y + 4);
+      ctx.stroke();
+      ctx.fillStyle = accentColor;
+      ctx.beginPath();
+      ctx.arc(wrist.x - 10, wrist.y - 4, 5, 0, 2 * Math.PI);
+      ctx.arc(wrist.x + 10, wrist.y + 4, 5, 0, 2 * Math.PI);
+      ctx.fill();
+      
+      drawJointNode(ctx, foot, accentColor, 3.5);
+      drawJointNode(ctx, hip, accentColor, 3.5);
+      drawJointNode(ctx, shoulder, accentColor, 3.5);
+      drawJointNode(ctx, elbow, accentColor, 3.5);
+      
+    } else if (animationType === 'TRICEP') {
+      const foot = { x: 150, y: 198 };
+      const knee = { x: 150, y: 162 };
+      const hip = { x: 150, y: 126 };
+      const shoulder = { x: 150, y: 78 };
+      const neck = { x: 150, y: 66 };
+      const head = { x: 150, y: 50 };
+      const elbow = { x: 150, y: 108 };
+      const wrist = { x: 150 + (1 - phase) * 15, y: 115 + phase * 32 };
+      
+      // Muscle highlight: Triceps (back of arm)
+      ctx.shadowBlur = 18;
+      const tricepWidth = 8.5 + (1 - phase) * 3;
+      ctx.fillStyle = accentGlow;
+      ctx.beginPath();
+      ctx.arc(shoulder.x - 6, (shoulder.y + elbow.y) / 2, tricepWidth, 0, 2 * Math.PI);
+      ctx.fill();
+      
+      // Draw skeleton
+      ctx.shadowBlur = 10;
+      drawSkeletonLine(ctx, foot, knee, accentColor, 3);
+      drawSkeletonLine(ctx, knee, hip, accentColor, 3);
+      drawSkeletonLine(ctx, hip, shoulder, accentColor, 3);
+      drawSkeletonLine(ctx, shoulder, neck, accentColor, 3);
+      drawSkeletonLine(ctx, shoulder, elbow, accentColor, 2.5);
+      drawSkeletonLine(ctx, elbow, wrist, accentColor, 2.5);
+      
+      // Head
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(head.x, head.y, 8, 0, 2 * Math.PI);
+      ctx.fill();
+      ctx.strokeStyle = accentColor;
+      ctx.stroke();
+      
+      // Handle bar
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.arc(wrist.x, wrist.y, 3.5, 0, 2 * Math.PI);
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+      ctx.stroke();
+      
+      drawJointNode(ctx, foot, accentColor, 3.5);
+      drawJointNode(ctx, hip, accentColor, 3.5);
+      drawJointNode(ctx, shoulder, accentColor, 3.5);
+      drawJointNode(ctx, elbow, accentColor, 3.5);
+      
+    } else if (animationType === 'PRESS') {
+      const lFoot = { x: 130, y: 198 };
+      const rFoot = { x: 170, y: 198 };
+      const lHip = { x: 135, y: 130 };
+      const rHip = { x: 165, y: 130 };
+      const spine = { x: 150, y: 130 };
+      const shoulderCenter = { x: 150, y: 80 };
+      const head = { x: 150, y: 55 };
+      const lShoulder = { x: 125, y: 80 };
+      const rShoulder = { x: 175, y: 80 };
+      
+      const isLateral = exerciseName.toLowerCase().includes('lateral') || exerciseName.toLowerCase().includes('rear') || exerciseName.toLowerCase().includes('front') || exerciseName.toLowerCase().includes('raise');
+      
+      let lElbow, rElbow, lWrist, rWrist;
+      
+      if (isLateral) {
+        lWrist = { x: 125 - phase * 32, y: 120 - phase * 42 };
+        rWrist = { x: 175 + phase * 32, y: 120 - phase * 42 };
+        lElbow = { x: 125 - phase * 18, y: 100 - phase * 20 };
+        rElbow = { x: 175 + phase * 18, y: 100 - phase * 20 };
+      } else {
+        lWrist = { x: 125, y: 85 - phase * 50 };
+        rWrist = { x: 175, y: 85 - phase * 50 };
+        lElbow = { x: 112 + phase * 10, y: 105 - phase * 50 };
+        rElbow = { x: 188 - phase * 10, y: 105 - phase * 50 };
+      }
+      
+      // Muscle highlight: Deltoids
+      ctx.shadowBlur = 18;
+      ctx.fillStyle = accentGlow;
+      ctx.beginPath();
+      ctx.arc(lShoulder.x, lShoulder.y, 7.5, 0, 2 * Math.PI);
+      ctx.arc(rShoulder.x, rShoulder.y, 7.5, 0, 2 * Math.PI);
+      ctx.fill();
+      
+      // Draw skeleton
+      ctx.shadowBlur = 10;
+      drawSkeletonLine(ctx, lFoot, lHip, 'rgba(255,255,255,0.2)', 2);
+      drawSkeletonLine(ctx, rFoot, rHip, 'rgba(255,255,255,0.2)', 2);
+      drawSkeletonLine(ctx, lHip, rHip, 'rgba(255,255,255,0.2)', 2);
+      drawSkeletonLine(ctx, spine, shoulderCenter, accentColor, 3);
+      drawSkeletonLine(ctx, lShoulder, rShoulder, accentColor, 3);
+      drawSkeletonLine(ctx, lShoulder, lElbow, accentColor, 2.5);
+      drawSkeletonLine(ctx, rShoulder, rElbow, accentColor, 2.5);
+      drawSkeletonLine(ctx, lElbow, lWrist, accentColor, 2.5);
+      drawSkeletonLine(ctx, rElbow, rWrist, accentColor, 2.5);
+      
+      // Head
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(head.x, head.y, 8, 0, 2 * Math.PI);
+      ctx.fill();
+      ctx.strokeStyle = accentColor;
+      ctx.stroke();
+      
+      if (!isLateral) {
+        // Barbell
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(lWrist.x - 16, lWrist.y);
+        ctx.lineTo(rWrist.x + 16, rWrist.y);
+        ctx.stroke();
+        
+        ctx.fillStyle = accentColor;
+        ctx.beginPath();
+        ctx.rect(lWrist.x - 20, lWrist.y - 12, 4, 24);
+        ctx.rect(rWrist.x + 16, rWrist.y - 12, 4, 24);
+        ctx.fill();
+      } else {
+        // Dumbbells
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(lWrist.x - 6, lWrist.y);
+        ctx.lineTo(lWrist.x + 6, lWrist.y);
+        ctx.moveTo(rWrist.x - 6, rWrist.y);
+        ctx.lineTo(rWrist.x + 6, rWrist.y);
+        ctx.stroke();
+        
+        ctx.fillStyle = accentColor;
+        ctx.beginPath();
+        ctx.arc(lWrist.x - 6, lWrist.y, 3.5, 0, 2 * Math.PI);
+        ctx.arc(lWrist.x + 6, lWrist.y, 3.5, 0, 2 * Math.PI);
+        ctx.arc(rWrist.x - 6, rWrist.y, 3.5, 0, 2 * Math.PI);
+        ctx.arc(rWrist.x + 6, rWrist.y, 3.5, 0, 2 * Math.PI);
+        ctx.fill();
+      }
+      
+      drawJointNode(ctx, lShoulder, accentColor, 3.5);
+      drawJointNode(ctx, rShoulder, accentColor, 3.5);
+      drawJointNode(ctx, lElbow, accentColor, 3);
+      drawJointNode(ctx, rElbow, accentColor, 3);
+      
+    } else if (animationType === 'CRUNCH') {
+      const hips = { x: 130, y: 195 };
+      const knee = { x: 170, y: 160 };
+      const foot = { x: 190, y: 195 };
+      const shoulder = { x: 75 + phase * 26, y: 195 - phase * 32 };
+      const neck = { x: shoulder.x + phase * 5, y: shoulder.y - 12 };
+      const head = { x: neck.x - 2, y: neck.y - 14 };
+      const elbow = { x: shoulder.x + 12, y: shoulder.y + 4 };
+      const wrist = { x: shoulder.x + 4, y: shoulder.y + 12 };
+      
+      // Muscle highlight: Abs
+      ctx.shadowBlur = 18;
+      const abMidX = (hips.x + shoulder.x) / 2;
+      const abMidY = (hips.y + shoulder.y) / 2;
+      ctx.fillStyle = accentGlow;
+      ctx.beginPath();
+      ctx.arc(abMidX, abMidY, 9, 0, 2 * Math.PI);
+      ctx.fill();
+      
+      // Draw skeleton
+      ctx.shadowBlur = 10;
+      drawSkeletonLine(ctx, foot, knee, 'rgba(255,255,255,0.2)', 2.5);
+      drawBone(ctx, knee, hips, 'rgba(255,255,255,0.2)', 2.5);
+      drawSkeletonLine(ctx, hips, shoulder, accentColor, 3);
+      drawSkeletonLine(ctx, shoulder, neck, accentColor, 3);
+      drawSkeletonLine(ctx, shoulder, elbow, accentColor, 2);
+      drawSkeletonLine(ctx, elbow, wrist, accentColor, 2);
+      
+      // Head
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(head.x, head.y, 8, 0, 2 * Math.PI);
+      ctx.fill();
+      ctx.strokeStyle = accentColor;
+      ctx.stroke();
+      
+      drawJointNode(ctx, hips, accentColor, 3.5);
+      drawJointNode(ctx, shoulder, accentColor, 3.5);
+    }
+    
+    activeAnimationId = requestAnimationFrame(draw);
+  }
+  
+  activeAnimationId = requestAnimationFrame(draw);
+}
+
+// Draw skeletal line bone
+function drawSkeletonLine(ctx, p1, p2, color, width) {
+  ctx.strokeStyle = color;
+  ctx.lineWidth = width;
+  ctx.beginPath();
+  ctx.moveTo(p1.x, p1.y);
+  ctx.lineTo(p2.x, p2.y);
+  ctx.stroke();
+}
+
+// Draw skeleton joint node
+function drawJointNode(ctx, p, color, radius) {
+  ctx.fillStyle = '#ffffff';
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, radius, 0, 2 * Math.PI);
+  ctx.fill();
+  ctx.stroke();
+}
+
+// Draw glowing targeted muscle capsule
+function drawMuscleCapsule(ctx, p1, p2, radius, color) {
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = radius * 2;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(p1.x, p1.y);
+  ctx.lineTo(p2.x, p2.y);
+  ctx.stroke();
+  ctx.restore();
+}
+
+// Saves a custom exercise added inside the Preset Builder modal
+function savePresetCustomExercise() {
+  const input = document.getElementById('preset-new-custom-ex-name');
+  const catSelect = document.getElementById('preset-custom-ex-cat-select');
+  const name = input.value.trim();
+  const category = catSelect ? catSelect.value : 'Core';
+  
+  if (!name) return;
+  
+  // Duplicate check
+  const customExNames = customExercises.map(e => e.name);
+  const allEx = [...Object.values(DEFAULT_CATALOGUE).flat(), ...customExNames].map(s => s.toLowerCase());
+  if (allEx.includes(name.toLowerCase())) {
+    alert('An exercise with this name already exists in the catalogue!');
+    input.focus();
+    return;
+  }
+  
+  customExercises.push({ name: name, category: category });
+  customExercises.sort((a, b) => a.name.localeCompare(b.name));
+  saveCustomExercises();
+  
+  input.value = '';
+  renderPresetBuilderCatalogue();
+  populateExerciseAutocomplete();
+}
+
 

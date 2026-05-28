@@ -1587,3 +1587,99 @@ input[type="number"]#preset-builder-sets-input::placeholder {
   text-shadow: 0 0 4px var(--accent-glow);
   opacity: 0.6;
 }
+
+/* Premium Bottom Sheet overlay styling */
+.sheet-overlay {
+  align-items: flex-end !important; /* Bottom-aligned */
+  justify-content: center !important;
+}
+
+.sheet-content {
+  width: 100% !important;
+  max-width: 480px !important; /* Match shell constraints */
+  height: 95vh !important;
+  max-height: 95vh !important;
+  margin: 0 !important;
+  border-radius: 24px 24px 0 0 !important; /* rounded top */
+  border-bottom: none !important;
+  display: flex;
+  flex-direction: column;
+  transform: translateY(100%);
+  animation: sheetSlideUp 0.35s cubic-bezier(0.25, 0.8, 0.25, 1) forwards !important;
+}
+
+@keyframes sheetSlideUp {
+  to { transform: translateY(0); }
+}
+
+/* Redesigned spacious lists inside the Preset Builder */
+#preset-catalogue-exercise-list {
+  max-height: 240px;
+  min-height: 180px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+  border: 1px solid var(--card-border);
+  margin-bottom: 12px;
+}
+
+#preset-builder-exercises-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 120px;
+  max-height: 220px;
+  overflow-y: auto;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 12px;
+  padding: 10px;
+  border: 1px solid var(--card-border);
+}
+
+/* Info Icon button styling next to exercise names */
+.ex-info-btn {
+  opacity: 0.6;
+  transition: opacity 0.2s, color 0.2s, transform 0.2s;
+}
+
+.ex-info-btn:hover {
+  opacity: 1;
+  color: var(--accent-color) !important;
+  transform: scale(1.15);
+}
+
+/* Catalogue Item cursor links */
+.ex-name-link {
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.ex-name-link:hover {
+  color: var(--accent-color);
+}
+
+/* Exercise history item inside detail view */
+.detail-history-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+}
+
+.detail-history-date {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.detail-history-sets {
+  color: var(--text-primary);
+  font-weight: 600;
+}

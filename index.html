@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PROGRESO // Premium Workout Tracker & Visualizer</title>
-  <link rel="stylesheet" href="style.css?v=36">
+  <link rel="stylesheet" href="style.css?v=37">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <meta name="theme-color" content="#bd00ff">
@@ -274,7 +274,7 @@
                 <button class="cat-pill" data-category="Arms">Arms</button>
                 <button class="cat-pill" data-category="Shoulders">Shoulders</button>
                 <button class="cat-pill" data-category="Core">Core</button>
-                <button class="cat-pill" data-category="Custom">My Exercises</button>
+                <button class="cat-pill" data-category="Custom">Custom</button>
               </div>
               
               <!-- Exercise List inside Drawer -->
@@ -658,8 +658,8 @@
   </div>
 
   <!-- PRESET BUILDER MODAL -->
-  <div id="preset-builder-modal" class="modal-overlay">
-    <div class="modal-content card" style="max-width: 400px; display: flex; flex-direction: column; max-height: 85vh;">
+  <div id="preset-builder-modal" class="modal-overlay sheet-overlay">
+    <div class="modal-content card sheet-content">
       <h3 class="card-title" id="preset-modal-title">Create Workout Preset</h3>
       
       <div style="overflow-y: auto; flex: 1; padding-right: 4px; margin-bottom: 12px;">
@@ -680,7 +680,7 @@
             <button class="cat-pill" id="p-cat-Arms" data-pcat="Arms" style="padding: 4px 10px; font-size: 0.75rem;">Arms</button>
             <button class="cat-pill" id="p-cat-Shoulders" data-pcat="Shoulders" style="padding: 4px 10px; font-size: 0.75rem;">Shoulders</button>
             <button class="cat-pill" id="p-cat-Core" data-pcat="Core" style="padding: 4px 10px; font-size: 0.75rem;">Core</button>
-            <button class="cat-pill" id="p-cat-Custom" data-pcat="Custom" style="padding: 4px 10px; font-size: 0.75rem;">My Ex</button>
+            <button class="cat-pill" id="p-cat-Custom" data-pcat="Custom" style="padding: 4px 10px; font-size: 0.75rem;">Custom</button>
           </div>
  
           <!-- Target sets select for quick add -->
@@ -690,8 +690,26 @@
           </div>
  
           <!-- Categorized exercise list inside Preset Builder -->
-          <div id="preset-catalogue-exercise-list" style="max-height: 110px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; padding: 6px; background: rgba(0,0,0,0.15); border-radius: 8px; border: 1px solid var(--card-border); margin-bottom: 12px;">
+          <div id="preset-catalogue-exercise-list">
             <!-- Category options -->
+          </div>
+
+          <!-- Add Custom Exercise Sub-Form inside Preset Builder -->
+          <div id="preset-custom-exercise-builder" style="display: none; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--card-border); margin-bottom: 12px;">
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <input type="text" id="preset-new-custom-ex-name" placeholder="New custom exercise name..." style="padding: 8px 12px; font-size: 0.85rem; border-radius: 8px; width: 100%;">
+              <div style="display: flex; gap: 6px; width: 100%;">
+                <select id="preset-custom-ex-cat-select" style="padding: 8px 12px; font-size: 0.85rem; border-radius: 8px; flex: 1; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); color: var(--text-primary);">
+                  <option value="Legs">Legs</option>
+                  <option value="Chest">Chest</option>
+                  <option value="Back">Back</option>
+                  <option value="Arms">Arms</option>
+                  <option value="Shoulders">Shoulders</option>
+                  <option value="Core">Core</option>
+                </select>
+                <button class="btn btn-primary" id="preset-save-custom-ex-btn" style="padding: 8px 14px; font-size: 0.85rem; border-radius: 8px;">Save</button>
+              </div>
+            </div>
           </div>
  
           <!-- Or Quick Manual Search Input -->
@@ -705,15 +723,69 @@
  
         <div style="margin-bottom: 10px;">
           <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">Preset Routine Exercises</label>
-          <div id="preset-builder-exercises-list" style="display: flex; flex-direction: column; gap: 8px; min-height: 80px; max-height: 150px; overflow-y: auto; background: rgba(0,0,0,0.25); border-radius: 12px; padding: 10px; border: 1px solid var(--card-border);">
+          <div id="preset-builder-exercises-list">
             <p id="preset-builder-empty-msg" style="text-align: center; color: var(--text-secondary); font-size: 0.85rem; padding: 20px 10px;">No exercises added to this routine yet.</p>
+          </div>
+        </div>
+      </div>
+ 
+      <div style="display: flex; justify-content: space-between; gap: 12px; border-top: 1px solid var(--card-border); padding-top: 16px;">
+        <button class="btn btn-secondary" id="preset-cancel-btn" style="flex: 1;">Cancel</button>
+        <button class="btn btn-primary" id="preset-save-btn" style="flex: 1;">Save Preset</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- EXERCISE DETAIL & HISTORY MODAL -->
+  <div id="exercise-detail-modal" class="modal-overlay sheet-overlay">
+    <div class="modal-content card sheet-content" style="max-height: 90vh;">
+      <h3 class="card-title" id="ex-detail-title">Exercise Detail</h3>
+      
+      <div style="overflow-y: auto; flex: 1; padding-right: 4px; margin-bottom: 12px; display: flex; flex-direction: column; gap: 16px;">
+        <!-- Visual Animation Box -->
+        <div class="detail-animation-wrapper" style="width: 100%; display: flex; justify-content: center; background: rgba(0,0,0,0.3); border-radius: 16px; border: 1px solid var(--card-border); position: relative; overflow: hidden; height: 220px;">
+          <canvas id="exercise-detail-canvas" width="300" height="220" style="display: block;"></canvas>
+          <div id="ex-detail-category-badge" style="position: absolute; bottom: 8px; right: 12px; font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px; background: rgba(0,0,0,0.4); padding: 4px 8px; border-radius: 6px;">
+            Category
+          </div>
+        </div>
+        
+        <!-- Instructions Panel -->
+        <div>
+          <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Instructions</label>
+          <p id="ex-detail-instructions" style="font-size: 0.85rem; color: var(--text-primary); line-height: 1.4; white-space: pre-line; background: rgba(255,255,255,0.01); padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.03);">
+            Instructions go here...
+          </p>
+        </div>
+
+        <!-- Statistics & Personal Bests -->
+        <div>
+          <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Personal Bests</label>
+          <div class="detail-stats-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+             <div class="detail-stat-box" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04); border-radius: 10px; padding: 10px; text-align: center;">
+               <span style="display: block; font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;">Max Weight</span>
+               <span id="ex-detail-max-weight" style="font-size: 1.2rem; font-weight: 800; color: var(--accent-color);">0 kg</span>
+             </div>
+             <div class="detail-stat-box" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04); border-radius: 10px; padding: 10px; text-align: center;">
+               <span style="display: block; font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;">Est. 1RM</span>
+               <span id="ex-detail-max-onerm" style="font-size: 1.2rem; font-weight: 800; color: var(--accent-color);">0 kg</span>
+             </div>
+          </div>
+        </div>
+
+        <!-- Recent History Logs -->
+        <div>
+          <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Recent Training History</label>
+          <div id="ex-detail-history" style="display: flex; flex-direction: column; gap: 8px;">
+            <!-- Dynamically populated rows -->
+            <p style="text-align: center; color: var(--text-secondary); font-size: 0.85rem; padding: 10px;">No workout logs for this exercise yet.</p>
           </div>
         </div>
       </div>
 
       <div style="display: flex; justify-content: space-between; gap: 12px; border-top: 1px solid var(--card-border); padding-top: 16px;">
-        <button class="btn btn-secondary" id="preset-cancel-btn" style="flex: 1;">Cancel</button>
-        <button class="btn btn-primary" id="preset-save-btn" style="flex: 1;">Save Preset</button>
+        <button class="btn btn-secondary" id="ex-detail-close-btn" style="flex: 1; border-radius: 10px; padding: 10px;">Close</button>
+        <button class="btn btn-primary" id="ex-detail-add-btn" style="flex: 1; border-radius: 10px; padding: 10px;">+ Add to Routine</button>
       </div>
     </div>
   </div>
