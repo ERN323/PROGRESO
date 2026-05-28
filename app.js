@@ -36,6 +36,7 @@ let customPresets = [];
 let presetBuilderExercises = []; // Temp list of { name, plannedSets } in builder modal
 let activeEditingPresetIndex = null; // null if creating, number if editing
 let presetBuilderStep = 1; // Wizard step tracking
+let presetBuilderConfirmDeleteIndex = null; // Track index displaying inline delete confirmation
 let activeCatalogueCategory = 'Legs';
 let activeChartMode = 'exercise'; // 'exercise' or 'muscle'
 let activePresetBuilderCategory = 'Legs';
@@ -1191,9 +1192,7 @@ function setupEventListeners() {
         // Check if Preset Builder is active
         const presetModal = document.getElementById('preset-builder-modal');
         if (presetModal && presetModal.classList.contains('active')) {
-          const setsInput = document.getElementById('preset-builder-sets-input');
-          const sets = parseInt(setsInput.value) || 4;
-          presetBuilderExercises.push({ name: exName, plannedSets: sets });
+          presetBuilderExercises.push({ name: exName, plannedSets: 4 });
           renderPresetBuilderExercises();
         } else {
           const setsInput = document.getElementById('plan-ex-sets');
@@ -2393,7 +2392,7 @@ window.openPresetBuilder = function(presetIndex = null) {
   
   // Clear inputs
   document.getElementById('preset-exercise-search').value = '';
-  document.getElementById('preset-builder-sets-input').value = '';
+  presetBuilderConfirmDeleteIndex = null;
   
   if (presetIndex === null) {
     nameInput.value = '';
@@ -2463,48 +2462,98 @@ function renderPresetBuilderExercises() {
     item.style.alignItems = 'center';
     item.style.background = 'rgba(255,255,255,0.03)';
     item.style.border = '1px solid rgba(255,255,255,0.06)';
-    item.style.borderRadius = '8px';
-    item.style.padding = '6px 12px';
-    item.style.fontSize = '0.85rem';
+    item.style.borderRadius = '10px';
+    item.style.padding = '8px 12px';
+    item.style.fontSize = '0.88rem';
+    item.style.marginBottom = '6px';
+    
+    const isConfirming = (idx === presetBuilderConfirmDeleteIndex);
     
     item.innerHTML = `
-      <div>
-        <span style="font-weight:600; color:var(--text-primary);">${ex.name}</span>
-        <span style="color:var(--text-secondary); font-size:0.78rem; margin-left:6px;">(${ex.plannedSets} sets)</span>
+      <div style="flex: 1; min-width: 0; padding-right: 8px;">
+        <span style="font-weight:600; color:var(--text-primary); text-overflow:ellipsis; overflow:hidden; white-space:nowrap; display:block;">${ex.name}</span>
       </div>
-      <button class="btn btn-danger btn-icon" onclick="removePresetBuilderExercise(${idx})" style="width: 24px; height: 24px; border-radius: 6px; padding:0;">
-        <svg width="10" height="10" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-        </svg>
-      </button>
+      <div style="display: flex; align-items: center; shrink: 0;">
+        ${isConfirming ? `
+          <span style="color:var(--text-secondary); font-size:0.75rem; margin-right:8px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Remove?</span>
+          <!-- Red cross (deny delete) -->
+          <button class="btn btn-secondary btn-icon" onclick="cancelPresetBuilderDelete()" style="width: 28px; height: 28px; border-radius: 6px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-color: rgba(255,255,255,0.15); margin-right: 6px;" title="No, cancel">
+            <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+          <!-- Green check (confirm delete) -->
+          <button class="btn btn-icon" onclick="confirmPresetBuilderDelete(${idx})" style="width: 28px; height: 28px; border-radius: 6px; padding: 0; display: inline-flex; align-items: center; justify-content: center; background: #00e676; border: 1px solid #00e676; color: #000;" title="Yes, delete">
+            <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          </button>
+        ` : `
+          <!-- Sets input next to delete button -->
+          <div style="display: flex; align-items: center; margin-right: 12px;">
+            <input type="number" min="1" max="20" class="preset-ex-sets-input" data-idx="${idx}" value="${ex.plannedSets}" style="width: 48px; text-align: center; border-radius: 6px; padding: 4px 6px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); color: var(--text-primary); font-size: 0.85rem; font-weight: 600;">
+            <span style="color:var(--text-secondary); font-size:0.8rem; margin-left:6px;">sets</span>
+          </div>
+          <!-- Trash Can button -->
+          <button class="btn btn-danger btn-icon" onclick="showPresetBuilderDeleteConfirm(${idx})" style="width: 28px; height: 28px; border-radius: 6px; padding:0; display: inline-flex; align-items: center; justify-content: center;">
+            <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </button>
+        `}
+      </div>
     `;
+    
+    // Bind change/input listeners for sets input to update planning sets state
+    if (!isConfirming) {
+      const input = item.querySelector('.preset-ex-sets-input');
+      if (input) {
+        input.addEventListener('change', (e) => {
+          const val = Math.max(1, parseInt(e.target.value) || 4);
+          presetBuilderExercises[idx].plannedSets = val;
+        });
+        input.addEventListener('input', (e) => {
+          const val = Math.max(1, parseInt(e.target.value) || 1);
+          presetBuilderExercises[idx].plannedSets = val;
+        });
+      }
+    }
+    
     listContainer.appendChild(item);
   });
 }
 
+// Inline delete confirmation actions
+window.showPresetBuilderDeleteConfirm = function(idx) {
+  presetBuilderConfirmDeleteIndex = idx;
+  renderPresetBuilderExercises();
+};
+
+window.cancelPresetBuilderDelete = function() {
+  presetBuilderConfirmDeleteIndex = null;
+  renderPresetBuilderExercises();
+};
+
+window.confirmPresetBuilderDelete = function(idx) {
+  presetBuilderExercises.splice(idx, 1);
+  presetBuilderConfirmDeleteIndex = null;
+  renderPresetBuilderExercises();
+};
+
 // Add exercise to preset builder list
 function addPresetExercise() {
   const searchInput = document.getElementById('preset-exercise-search');
-  const setsInput = document.getElementById('preset-builder-sets-input');
   
   const name = searchInput.value.trim();
-  const sets = parseInt(setsInput.value) || 4;
   
   if (!name) return;
   
-  presetBuilderExercises.push({ name, plannedSets: sets });
+  presetBuilderExercises.push({ name, plannedSets: 4 });
   searchInput.value = '';
-  setsInput.value = '4';
   
   renderPresetBuilderExercises();
   searchInput.focus();
 }
-
-// Remove exercise from preset builder list
-window.removePresetBuilderExercise = function(index) {
-  presetBuilderExercises.splice(index, 1);
-  renderPresetBuilderExercises();
-};
 
 // Saves the preset to storage
 function savePreset() {
@@ -2777,10 +2826,7 @@ function renderPresetBuilderCatalogue() {
 
 // Add exercise from preset catalogue to temporary preset builder list
 window.addExerciseToPresetBuilderList = function(name, event) {
-  const setsInput = document.getElementById('preset-builder-sets-input');
-  const sets = parseInt(setsInput.value) || 4;
-  
-  presetBuilderExercises.push({ name, plannedSets: sets });
+  presetBuilderExercises.push({ name, plannedSets: 4 });
   renderPresetBuilderExercises();
 
   // Flash item to indicate successful add
