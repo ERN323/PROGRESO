@@ -5037,7 +5037,15 @@ function onReorderDragStart(e, idx) {
 function onReorderDragMove(e) {
   if (draggedIdx === null) return;
   
-  const currentY = e.clientY;
+  // Constrain Y coordinate within container bounds to prevent dragging out of window
+  let currentY = e.clientY;
+  const container = document.getElementById('active-reorder-list');
+  if (container) {
+    const rect = container.getBoundingClientRect();
+    if (currentY < rect.top) currentY = rect.top;
+    if (currentY > rect.bottom) currentY = rect.bottom;
+  }
+  
   const diffY = currentY - dragStartY;
   
   const itemEl = document.querySelector(`[data-reorder-idx="${draggedIdx}"]`);
@@ -5045,8 +5053,11 @@ function onReorderDragMove(e) {
     itemEl.style.transform = `translateY(${diffY}px) scale(1.02)`;
   }
   
-  // Find element under pointer
-  const elementUnder = document.elementFromPoint(e.clientX, e.clientY);
+  // Find element under pointer, temporarily piercing through the dragging element
+  if (itemEl) itemEl.style.pointerEvents = 'none';
+  const elementUnder = document.elementFromPoint(e.clientX, currentY);
+  if (itemEl) itemEl.style.pointerEvents = 'auto';
+  
   if (!elementUnder) return;
   
   // Find the closest reorder-item under the pointer
