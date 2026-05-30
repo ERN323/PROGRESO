@@ -387,54 +387,8 @@ function loadLogsFromStorage() {
       logsData = [];
     }
   } else {
-    // Seed with user's historical spreadsheet data
-    logsData = [
-      {"Date":"07.05.2026","Name of Exercise":"Kettlebell Goblet Squats","1 (kg)":"24","1 (reps)":"12","2 (kg)":"24","2 (reps)":"12","3 (kg)":"24","3 (reps)":"12","4 (kg)":"24","4 (reps)":"12"},
-      {"Date":"07.05.2026","Name of Exercise":"Barbell Rows","1 (kg)":"40","1 (reps)":"12","2 (kg)":"40","2 (reps)":"12","3 (kg)":"40","3 (reps)":"12","4 (kg)":"40","4 (reps)":"9"},
-      {"Date":"07.05.2026","Name of Exercise":"Dumbell Bench Press","1 (kg)":"16","1 (reps)":"12","2 (kg)":"16","2 (reps)":"12","3 (kg)":"16","3 (reps)":"12","4 (kg)":"18","4 (reps)":"9"},
-      {"Date":"07.05.2026","Name of Exercise":"Shoulder Press","1 (kg)":"12","1 (reps)":"12","2 (kg)":"12","2 (reps)":"10","3 (kg)":"12","3 (reps)":"9"},
-      {"Date":"07.05.2026","Name of Exercise":"Halos","1 (kg)":"12","1 (reps)":"20","2 (kg)":"12","2 (reps)":"20","3 (kg)":"12","3 (reps)":"20"},
-      {"Date":"09.05.2026","Name of Exercise":"Kettlebell Goblet Squats","1 (kg)":"24","1 (reps)":"12","2 (kg)":"28","2 (reps)":"12","3 (kg)":"28","3 (reps)":"12","4 (kg)":"28","4 (reps)":"12"},
-      {"Date":"09.05.2026","Name of Exercise":"Barbell Rows","1 (kg)":"40","1 (reps)":"12","2 (kg)":"40","2 (reps)":"12","3 (kg)":"40","3 (reps)":"12","4 (kg)":"40","4 (reps)":"9"},
-      {"Date":"09.05.2026","Name of Exercise":"Dumbell Bench Press","1 (kg)":"16","1 (reps)":"12","2 (kg)":"18","2 (reps)":"12","3 (kg)":"18","3 (reps)":"10","4 (kg)":"18","4 (reps)":"8"},
-      {"Date":"09.05.2026","Name of Exercise":"Shoulder Press","1 (kg)":"12","1 (reps)":"10","2 (kg)":"10","2 (reps)":"12","3 (kg)":"10","3 (reps)":"11"},
-      {"Date":"09.05.2026","Name of Exercise":"Halos","1 (kg)":"12","1 (reps)":"20","2 (kg)":"12","2 (reps)":"20","3 (kg)":"12","3 (reps)":"20"},
-      {"Date":"11.05.2026","Name of Exercise":"Kettlebell Goblet Squats","1 (kg)":"28","1 (reps)":"12","2 (kg)":"28","2 (reps)":"12","3 (kg)":"28","3 (reps)":"12","4 (kg)":"28","4 (reps)":"12"},
-      {"Date":"11.05.2026","Name of Exercise":"Barbell Rows","1 (kg)":"30","1 (reps)":"12","2 (kg)":"40","2 (reps)":"12","3 (kg)":"40","3 (reps)":"12","4 (kg)":"40","4 (reps)":"9"},
-      {"Date":"11.05.2026","Name of Exercise":"Dumbell Bench Press","1 (kg)":"18","1 (reps)":"12","2 (kg)":"18","2 (reps)":"12","3 (kg)":"18","3 (reps)":"12","4 (kg)":"18","4 (reps)":"12"},
-      {"Date":"11.05.2026","Name of Exercise":"Shoulder Press","1 (kg)":"12","1 (reps)":"12","2 (kg)":"12","2 (reps)":"9","3 (kg)":"10","3 (reps)":"12","4 (kg)":"10","4 (reps)":"10"},
-      {"Date":"11.05.2026","Name of Exercise":"Halos","1 (kg)":"12","1 (reps)":"20","2 (kg)":"12","2 (reps)":"20","3 (kg)":"12","3 (reps)":"20"},
-      {"Date":"13.05.2026","Name of Exercise":"Kettlebell Goblet Squats","1 (kg)":"28","1 (reps)":"12","2 (kg)":"28","2 (reps)":"12","3 (kg)":"28","3 (reps)":"12","4 (kg)":"28","4 (reps)":"12"},
-      {"Date":"13.05.2026","Name of Exercise":"Barbell Rows","1 (kg)":"40","1 (reps)":"12","2 (kg)":"40","2 (reps)":"12","3 (kg)":"40","3 (reps)":"12","4 (kg)":"40","4 (reps)":"9"},
-      {"Date":"13.05.2026","Name of Exercise":"Dumbell Bench Press","1 (kg)":"18","1 (reps)":"12","2 (kg)":"18","2 (reps)":"12","3 (kg)":"18","3 (reps)":"12","4 (kg)":"18","4 (reps)":"8"},
-      {"Date":"13.05.2026","Name of Exercise":"Shoulder Press","1 (kg)":"12","1 (reps)":"12","2 (kg)":"12","2 (reps)":"12","3 (kg)":"12","3 (reps)":"10","4 (kg)":"12","4 (reps)":"11"},
-      {"Date":"13.05.2026","Name of Exercise":"Halos","1 (kg)":"12","1 (reps)":"20","2 (kg)":"12","2 (reps)":"20","3 (kg)":"12","3 (reps)":"20"},
-      {"Date":"15.05.2026","Name of Exercise":"Squats","1 (kg)":"40","1 (reps)":"12","2 (kg)":"40","2 (reps)":"12","3 (kg)":"50","3 (reps)":"12","4 (kg)":"50","4 (reps)":"12"},
-      {"Date":"15.05.2026","Name of Exercise":"lateral pulldowns","1 (kg)":"40","1 (reps)":"12","2 (kg)":"40","2 (reps)":"11","3 (kg)":"35","3 (reps)":"12","4 (kg)":"35","4 (reps)":"10"},
-      {"Date":"15.05.2026","Name of Exercise":"Dumbell Bench Press","1 (kg)":"18","1 (reps)":"12","2 (kg)":"18","2 (reps)":"12","3 (kg)":"18","3 (reps)":"12","4 (kg)":"18","4 (reps)":"10"},
-      {"Date":"15.05.2026","Name of Exercise":"lateral raises","1 (kg)":"8","1 (reps)":"10","2 (kg)":"8","2 (reps)":"12","3 (kg)":"8","3 (reps)":"10","4 (kg)":"8","4 (reps)":"10"},
-      {"Date":"15.05.2026","Name of Exercise":"Halos","1 (kg)":"12","1 (reps)":"20","2 (kg)":"12","2 (reps)":"20","3 (kg)":"12","3 (reps)":"20"},
-      {"Date":"18.05.2026","Name of Exercise":"Squats","1 (kg)":"40","1 (reps)":"12","2 (kg)":"50","2 (reps)":"12","3 (kg)":"50","3 (reps)":"12","4 (kg)":"50","4 (reps)":"12"},
-      {"Date":"18.05.2026","Name of Exercise":"lateral pulldowns","1 (kg)":"40","1 (reps)":"12","2 (kg)":"40","2 (reps)":"11","3 (kg)":"40","3 (reps)":"12","4 (kg)":"40","4 (reps)":"10"},
-      {"Date":"18.05.2026","Name of Exercise":"Dumbell Bench Press","1 (kg)":"18","1 (reps)":"12","2 (kg)":"20","2 (reps)":"12","3 (kg)":"18","3 (reps)":"7/2","4 (kg)":"18","4 (reps)":"10"},
-      {"Date":"18.05.2026","Name of Exercise":"lateral raises","1 (kg)":"10","1 (reps)":"12","2 (kg)":"8","2 (reps)":"12","3 (kg)":"8","3 (reps)":"10","4 (kg)":"8","4 (reps)":"10"},
-      {"Date":"18.05.2026","Name of Exercise":"Halos","1 (kg)":"12","1 (reps)":"20","2 (kg)":"12","2 (reps)":"20","3 (kg)":"12","3 (reps)":"20"},
-      {"Date":"20.05.2026","Name of Exercise":"Squats","1 (kg)":"50","1 (reps)":"12","2 (kg)":"55","2 (reps)":"12","3 (kg)":"55","3 (reps)":"12","4 (kg)":"55","4 (reps)":"12"},
-      {"Date":"20.05.2026","Name of Exercise":"lateral pulldowns","1 (kg)":"40","1 (reps)":"12","2 (kg)":"40","2 (reps)":"12","3 (kg)":"40","3 (reps)":"10","4 (kg)":"35","4 (reps)":"12"},
-      {"Date":"20.05.2026","Name of Exercise":"Dumbell Bench Press","1 (kg)":"18","1 (reps)":"12","2 (kg)":"20","2 (reps)":"12","3 (kg)":"20","3 (reps)":"12","4 (kg)":"18","4 (reps)":"10"},
-      {"Date":"20.05.2026","Name of Exercise":"lateral raises","1 (kg)":"8","1 (reps)":"12","2 (kg)":"8","2 (reps)":"12","3 (kg)":"8","3 (reps)":"12","4 (kg)":"8","4 (reps)":"10"},
-      {"Date":"20.05.2026","Name of Exercise":"Halos","1 (kg)":"12","1 (reps)":"20","2 (kg)":"12","2 (reps)":"20","3 (kg)":"12","3 (reps)":"20"},
-      {"Date":"22.05.2026","Name of Exercise":"Squats","1 (kg)":"50","1 (reps)":"12","2 (kg)":"55","2 (reps)":"12","3 (kg)":"55","3 (reps)":"12","4 (kg)":"55","4 (reps)":"12"},
-      {"Date":"22.05.2026","Name of Exercise":"lateral pulldowns","1 (kg)":"40","1 (reps)":"12","2 (kg)":"40","2 (reps)":"12","3 (kg)":"40","3 (reps)":"10","4 (kg)":"35","4 (reps)":"12"},
-      {"Date":"22.05.2026","Name of Exercise":"Dumbell Bench Press","1 (kg)":"18","1 (reps)":"12","2 (kg)":"20","2 (reps)":"12","3 (kg)":"20","3 (reps)":"12","4 (kg)":"18","4 (reps)":"10"},
-      {"Date":"22.05.2026","Name of Exercise":"lateral raises","1 (kg)":"8","1 (reps)":"12","2 (kg)":"8","2 (reps)":"12","3 (kg)":"8","3 (reps)":"12","4 (kg)":"8","4 (reps)":"10"},
-      {"Date":"22.05.2026","Name of Exercise":"Halos","1 (kg)":"12","1 (reps)":"20","2 (kg)":"12","2 (reps)":"20","3 (kg)":"12","3 (reps)":"20"},
-      {"Date":"24.05.2026","Name of Exercise":"Squats","1 (kg)":"50","1 (reps)":"12","2 (kg)":"55","2 (reps)":"12","3 (kg)":"55","3 (reps)":"12","4 (kg)":"55","4 (reps)":"12"},
-      {"Date":"24.05.2026","Name of Exercise":"lateral pulldowns","1 (kg)":"40","1 (reps)":"12","2 (kg)":"40","2 (reps)":"12","3 (kg)":"40","3 (reps)":"10","4 (kg)":"35","4 (reps)":"12"},
-      {"Date":"24.05.2026","Name of Exercise":"Dumbell Bench Press","1 (kg)":"18","1 (reps)":"12","2 (kg)":"20","2 (reps)":"12","3 (kg)":"20","3 (reps)":"12","4 (kg)":"18","4 (reps)":"10"},
-      {"Date":"24.05.2026","Name of Exercise":"lateral raises","1 (kg)":"8","1 (reps)":"12","2 (kg)":"8","2 (reps)":"12","3 (kg)":"8","3 (reps)":"12","4 (kg)":"8","4 (reps)":"10"},
-      {"Date":"24.05.2026","Name of Exercise":"Halos","1 (kg)":"12","1 (reps)":"20","2 (kg)":"12","2 (reps)":"20","3 (kg)":"12","3 (reps)":"20"}
-    ];
+    // New users start with completely empty data
+    logsData = [];
     saveLogsToStorage();
   }
 }
