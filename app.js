@@ -176,6 +176,7 @@ const screens = {
 document.addEventListener('DOMContentLoaded', () => {
   restAudio = document.getElementById('rest-timer-audio');
   loadTheme();
+  loadThemeMode();
   loadLogsFromStorage();
   loadCustomData();
   loadSoundSettings();
@@ -301,7 +302,14 @@ function loadTheme() {
   const savedTheme = localStorage.getItem('progreso-theme');
   if (savedTheme) {
     currentTheme = savedTheme;
-    document.body.className = `theme-${savedTheme}`;
+    
+    // Remove any existing theme- classes to preserve other classes (e.g. mode-light)
+    Array.from(document.body.classList).forEach(cls => {
+      if (cls.startsWith('theme-')) {
+        document.body.classList.remove(cls);
+      }
+    });
+    document.body.classList.add(`theme-${savedTheme}`);
     
     // Update active state in UI
     document.querySelectorAll('.theme-dot').forEach(dot => {
@@ -312,7 +320,15 @@ function loadTheme() {
 
 function selectTheme(themeName) {
   currentTheme = themeName;
-  document.body.className = `theme-${themeName}`;
+  
+  // Remove any existing theme- classes
+  Array.from(document.body.classList).forEach(cls => {
+    if (cls.startsWith('theme-')) {
+      document.body.classList.remove(cls);
+    }
+  });
+  document.body.classList.add(`theme-${themeName}`);
+  
   localStorage.setItem('progreso-theme', themeName);
   
   document.querySelectorAll('.theme-dot').forEach(dot => {
@@ -320,6 +336,41 @@ function selectTheme(themeName) {
   });
   
   // Re-draw chart to match new neon colors
+  if (chartInstance) {
+    drawChart();
+  }
+}
+
+// Theme Mode Handler (Light / Dark / System)
+let currentThemeMode = 'dark';
+
+function loadThemeMode() {
+  const savedMode = localStorage.getItem('progreso-theme-mode') || 'dark';
+  currentThemeMode = savedMode;
+  applyThemeMode(savedMode);
+}
+
+function applyThemeMode(mode) {
+  currentThemeMode = mode;
+  const mediaQuery = window.matchMedia('(prefers-color-scheme: light)');
+  
+  // Set active class on buttons
+  document.querySelectorAll('.mode-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.mode === mode);
+  });
+  
+  if (mode === 'light') {
+    document.body.classList.add('mode-light');
+  } else if (mode === 'dark') {
+    document.body.classList.remove('mode-light');
+  } else if (mode === 'system') {
+    const isSystemLight = mediaQuery.matches;
+    document.body.classList.toggle('mode-light', isSystemLight);
+  }
+  
+  localStorage.setItem('progreso-theme-mode', mode);
+  
+  // Re-draw chart to match new mode text colors
   if (chartInstance) {
     drawChart();
   }
@@ -619,6 +670,21 @@ function setupEventListeners() {
   // Theme changes
   document.querySelectorAll('.theme-dot').forEach(dot => {
     dot.addEventListener('click', () => selectTheme(dot.dataset.theme));
+  });
+
+  // Theme mode changes
+  document.querySelectorAll('.mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => applyThemeMode(btn.dataset.mode));
+  });
+
+  // Listen for system theme changes in real-time
+  window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', (e) => {
+    if (localStorage.getItem('progreso-theme-mode') === 'system') {
+      document.body.classList.toggle('mode-light', e.matches);
+      if (chartInstance) {
+        drawChart();
+      }
+    }
   });
 
   // Spreadsheet Uploader
@@ -1823,6 +1889,11 @@ function drawChart() {
     chartInstance.destroy();
     chartInstance = null;
   }
+
+  const bodyStyles = getComputedStyle(document.body);
+  const textPrimary = bodyStyles.getPropertyValue('--text-primary').trim() || '#f5f6f8';
+  const textSecondary = bodyStyles.getPropertyValue('--text-secondary').trim() || '#8f94a6';
+  const gridColor = bodyStyles.getPropertyValue('--card-border').trim() || 'rgba(255, 255, 255, 0.03)';
   
   if (logsData.length === 0) {
     if (placeholder) {
@@ -1988,7 +2059,7 @@ function drawChart() {
             display: true,
             position: 'top',
             labels: {
-              color: '#f5f6f8',
+              color: textPrimary,
               font: { family: 'Outfit', size: 10 }
             }
           },
@@ -2003,19 +2074,19 @@ function drawChart() {
         },
         scales: {
           x: {
-            grid: { color: 'rgba(255, 255, 255, 0.03)' },
-            ticks: { color: '#8f94a6', font: { family: 'Outfit', size: 9 } }
+            grid: { color: gridColor },
+            ticks: { color: textSecondary, font: { family: 'Outfit', size: 9 } }
           },
           'y-vol': {
             type: 'linear',
             display: showOneRmSeries,
             position: 'left',
-            grid: { color: 'rgba(255, 255, 255, 0.03)' },
-            ticks: { color: '#f5f6f8', font: { family: 'Outfit', size: 9 } },
+            grid: { color: gridColor },
+            ticks: { color: textPrimary, font: { family: 'Outfit', size: 9 } },
             title: {
               display: true,
               text: '1RM (kg)',
-              color: '#f5f6f8',
+              color: textPrimary,
               font: { family: 'Outfit', size: 10, weight: 'bold' }
             }
           },
@@ -2024,11 +2095,11 @@ function drawChart() {
             display: showVolumeSeries,
             position: 'right',
             grid: { drawOnChartArea: false },
-            ticks: { color: '#8f94a6', font: { family: 'Outfit', size: 9 } },
+            ticks: { color: textSecondary, font: { family: 'Outfit', size: 9 } },
             title: {
               display: true,
               text: 'Volume (kg)',
-              color: '#8f94a6',
+              color: textSecondary,
               font: { family: 'Outfit', size: 10, weight: 'bold' }
             }
           }
@@ -2197,7 +2268,7 @@ function drawChart() {
             display: true,
             position: 'top',
             labels: {
-              color: '#f5f6f8',
+              color: textPrimary,
               font: { family: 'Outfit', size: 10 }
             }
           },
@@ -2212,19 +2283,19 @@ function drawChart() {
         },
         scales: {
           x: {
-            grid: { color: 'rgba(255, 255, 255, 0.03)' },
-            ticks: { color: '#8f94a6', font: { family: 'Outfit', size: 9 } }
+            grid: { color: gridColor },
+            ticks: { color: textSecondary, font: { family: 'Outfit', size: 9 } }
           },
           'y-daily': {
             type: 'linear',
             display: showVolumeSeries,
             position: 'left',
-            grid: { color: 'rgba(255, 255, 255, 0.03)' },
-            ticks: { color: '#f5f6f8', font: { family: 'Outfit', size: 9 } },
+            grid: { color: gridColor },
+            ticks: { color: textPrimary, font: { family: 'Outfit', size: 9 } },
             title: {
               display: true,
               text: 'Daily Volume (kg)',
-              color: '#f5f6f8',
+              color: textPrimary,
               font: { family: 'Outfit', size: 10, weight: 'bold' }
             }
           },
@@ -2233,11 +2304,11 @@ function drawChart() {
             display: showOneRmSeries,
             position: 'right',
             grid: { drawOnChartArea: false },
-            ticks: { color: '#8f94a6', font: { family: 'Outfit', size: 9 } },
+            ticks: { color: textSecondary, font: { family: 'Outfit', size: 9 } },
             title: {
               display: true,
               text: 'Cumulative Volume (kg)',
-              color: '#8f94a6',
+              color: textSecondary,
               font: { family: 'Outfit', size: 10, weight: 'bold' }
             }
           }
