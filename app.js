@@ -4921,9 +4921,9 @@ function renderActiveReorderList() {
       justify-content: space-between;
       background: rgba(255, 255, 255, 0.02);
       border: 1px solid ${isActive ? 'var(--accent-color)' : 'var(--card-border)'};
-      padding: 10px 14px;
+      padding: 12px 16px;
       border-radius: 12px;
-      gap: 10px;
+      gap: 12px;
       opacity: ${isCompleted ? '0.45' : '1'};
       transition: border-color 0.25s ease, opacity 0.25s ease, box-shadow 0.25s ease;
       box-shadow: ${isActive ? '0 0 10px var(--accent-glow)' : 'none'};
@@ -4931,7 +4931,34 @@ function renderActiveReorderList() {
       user-select: none;
     `;
     
-    // Left side: Drag handle (only for movable items)
+    // Left/Middle: Name & Status badge
+    const infoCol = document.createElement('div');
+    infoCol.style.cssText = 'display: flex; flex-direction: column; flex-grow: 1; min-width: 0;';
+    
+    const nameSpan = document.createElement('span');
+    nameSpan.style.cssText = 'font-weight: 600; font-size: 0.95rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-primary);';
+    nameSpan.textContent = ex.name;
+    
+    const badgeSpan = document.createElement('span');
+    badgeSpan.className = 'reorder-badge';
+    badgeSpan.style.cssText = 'font-size: 0.72rem; font-weight: 600; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px;';
+    
+    if (isCompleted) {
+      badgeSpan.style.color = 'var(--text-secondary)';
+      badgeSpan.textContent = 'Completed';
+    } else if (isActive) {
+      badgeSpan.style.color = 'var(--accent-color)';
+      badgeSpan.textContent = `Current Exercise • Set ${activeSession.currentSetIndex + 1} of ${ex.plannedSets}`;
+    } else {
+      badgeSpan.style.color = 'var(--text-secondary)';
+      badgeSpan.textContent = 'Upcoming';
+    }
+    
+    infoCol.appendChild(nameSpan);
+    infoCol.appendChild(badgeSpan);
+    item.appendChild(infoCol);
+    
+    // Right side: Drag handle (for movable items) or Checkmark (for completed items)
     if (!isCompleted) {
       const handle = document.createElement('div');
       handle.className = 'drag-handle';
@@ -4939,15 +4966,18 @@ function renderActiveReorderList() {
         cursor: grab;
         display: flex;
         align-items: center;
+        justify-content: center;
         color: var(--text-secondary);
-        padding-right: 10px;
+        padding: 8px;
+        margin-right: -4px;
         flex-shrink: 0;
         user-select: none;
         touch-action: none;
       `;
       handle.innerHTML = `
-        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M4 8h16M4 16h16" />
+        <svg width="18" height="12" viewBox="0 0 18 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <line x1="2" y1="3" x2="16" y2="3" />
+          <line x1="2" y1="9" x2="16" y2="9" />
         </svg>
       `;
       
@@ -4968,45 +4998,16 @@ function renderActiveReorderList() {
       
       item.appendChild(handle);
     } else {
-      // Small spacing spacer for completed items so they align beautifully
-      const spacer = document.createElement('div');
-      spacer.style.cssText = 'width: 28px; flex-shrink: 0;';
-      item.appendChild(spacer);
+      // Completed items show a themed checkmark badge on the right
+      const checkBadge = document.createElement('div');
+      checkBadge.style.cssText = 'color: var(--accent-color); padding: 8px; opacity: 0.8; display: flex; align-items: center; justify-content: center; flex-shrink: 0; filter: drop-shadow(0 0 5px var(--accent-glow));';
+      checkBadge.innerHTML = `
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+        </svg>
+      `;
+      item.appendChild(checkBadge);
     }
-    
-    // Middle: name & status label
-    const infoCol = document.createElement('div');
-    infoCol.style.cssText = 'display: flex; flex-direction: column; flex-grow: 1; min-width: 0;';
-    
-    const nameSpan = document.createElement('span');
-    nameSpan.style.cssText = 'font-weight: 600; font-size: 0.92rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;';
-    nameSpan.textContent = ex.name;
-    
-    const badgeSpan = document.createElement('span');
-    badgeSpan.className = 'reorder-badge';
-    badgeSpan.style.cssText = 'font-size: 0.72rem; font-weight: 600; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.3px;';
-    
-    if (isCompleted) {
-      badgeSpan.style.color = 'var(--text-secondary)';
-      badgeSpan.textContent = 'Completed';
-    } else if (isActive) {
-      badgeSpan.style.color = 'var(--accent-color)';
-      badgeSpan.textContent = `Current Exercise • Set ${activeSession.currentSetIndex + 1} of ${ex.plannedSets}`;
-    } else {
-      badgeSpan.style.color = 'var(--text-secondary)';
-      badgeSpan.textContent = 'Upcoming';
-    }
-    
-    infoCol.appendChild(nameSpan);
-    infoCol.appendChild(badgeSpan);
-    item.appendChild(infoCol);
-    
-    // Right side: Completed count badge
-    const rightCol = document.createElement('div');
-    rightCol.style.cssText = 'font-size: 0.75rem; color: var(--text-secondary); flex-shrink: 0; font-weight: 600;';
-    const completedSetsCount = ex.actualSets ? ex.actualSets.length : 0;
-    rightCol.textContent = `${completedSetsCount}/${ex.plannedSets} sets`;
-    item.appendChild(rightCol);
     
     container.appendChild(item);
   });
@@ -5083,13 +5084,23 @@ function onReorderDragMove(e) {
       if (currentY > targetMidpoint) return;
     }
     
+    // FLIP Animation: Record current tops of all sibling elements before DOM change
+    const parent = itemEl.parentNode;
+    const siblings = Array.from(parent.children).filter(child => child !== itemEl);
+    const firstPositions = siblings.map(sib => ({
+      el: sib,
+      top: sib.getBoundingClientRect().top
+    }));
+    
+    // Record dragged item natural top before swap (subtracting current translation)
+    const naturalTopBefore = itemEl.getBoundingClientRect().top - diffY;
+    
     // Swap in temporary array
     const temp = tempReorderExercises[draggedIdx];
     tempReorderExercises[draggedIdx] = tempReorderExercises[targetIdx];
     tempReorderExercises[targetIdx] = temp;
     
     // Swap in the DOM
-    const parent = itemEl.parentNode;
     if (targetIdx > draggedIdx) {
       parent.insertBefore(itemEl, targetItem.nextSibling);
     } else {
@@ -5101,9 +5112,36 @@ function onReorderDragMove(e) {
       child.dataset.reorderIdx = index;
     });
     
-    // Update variables
+    // Calculate layout shift for the dragged item
+    const naturalTopAfter = itemEl.getBoundingClientRect().top - diffY;
+    const shift = naturalTopAfter - naturalTopBefore;
+    
+    // Adjust dragStartY by the exact layout shift to prevent visual cursor jumping!
+    dragStartY += shift;
     draggedIdx = targetIdx;
-    dragStartY = currentY; // Reset Y tracking origin to the new swapped position
+    
+    // Apply new translation instantly
+    const newDiffY = currentY - dragStartY;
+    itemEl.style.transform = `translateY(${newDiffY}px) scale(1.02)`;
+    
+    // FLIP Animation: Invert sibling positions and transition smoothly
+    firstPositions.forEach(pos => {
+      const lastTop = pos.el.getBoundingClientRect().top;
+      const invertY = pos.top - lastTop;
+      
+      if (invertY !== 0) {
+        // Invert: shift sibling back to its original visual position instantly
+        pos.el.style.transition = 'none';
+        pos.el.style.transform = `translateY(${invertY}px)`;
+        
+        // Force browser layout recalculation
+        pos.el.offsetHeight;
+        
+        // Play: animate back to its new natural DOM position (translateY(0))
+        pos.el.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)';
+        pos.el.style.transform = 'translateY(0)';
+      }
+    });
     
     updateReorderBadgesAndStyles();
   }
