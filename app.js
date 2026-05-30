@@ -35,6 +35,8 @@ let customExercises = [];
 let customPresets = [];
 let presetBuilderExercises = []; // Temp list of { name, plannedSets } in builder modal
 let tempReorderExercises = []; // Temp list for reordering active workout session exercises
+let draggedIdx = null; // Currently dragged exercise index in reorder modal
+let dragStartY = 0; // Starting Y coordinate of pointer drag gesture
 let activeEditingPresetIndex = null; // null if creating, number if editing
 let presetBuilderStep = 1; // Wizard step tracking
 let presetBuilderConfirmDeleteIndex = null; // Track index displaying inline delete confirmation
@@ -4912,6 +4914,7 @@ function renderActiveReorderList() {
     // Create card container
     const item = document.createElement('div');
     item.className = 'reorder-item';
+    item.dataset.reorderIdx = idx;
     item.style.cssText = `
       display: flex;
       align-items: center;
@@ -4922,11 +4925,56 @@ function renderActiveReorderList() {
       border-radius: 12px;
       gap: 10px;
       opacity: ${isCompleted ? '0.45' : '1'};
-      transition: all 0.25s ease;
+      transition: border-color 0.25s ease, opacity 0.25s ease, box-shadow 0.25s ease;
       box-shadow: ${isActive ? '0 0 10px var(--accent-glow)' : 'none'};
+      touch-action: none; /* Crucial for preventing scrolling during touch drags */
+      user-select: none;
     `;
     
-    // Left side: name & status label
+    // Left side: Drag handle (only for movable items)
+    if (!isCompleted) {
+      const handle = document.createElement('div');
+      handle.className = 'drag-handle';
+      handle.style.cssText = `
+        cursor: grab;
+        display: flex;
+        align-items: center;
+        color: var(--text-secondary);
+        padding-right: 10px;
+        flex-shrink: 0;
+        user-select: none;
+        touch-action: none;
+      `;
+      handle.innerHTML = `
+        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 8h16M4 16h16" />
+        </svg>
+      `;
+      
+      // Hook up Pointer Events for touch-compatible dragging
+      handle.addEventListener('pointerdown', (e) => {
+        handle.style.cursor = 'grabbing';
+        onReorderDragStart(e, idx);
+      });
+      handle.addEventListener('pointermove', onReorderDragMove);
+      
+      const endDrag = (e) => {
+        handle.style.cursor = 'grab';
+        onReorderDragEnd(e);
+      };
+      
+      handle.addEventListener('pointerup', endDrag);
+      handle.addEventListener('pointercancel', endDrag);
+      
+      item.appendChild(handle);
+    } else {
+      // Small spacing spacer for completed items so they align beautifully
+      const spacer = document.createElement('div');
+      spacer.style.cssText = 'width: 28px; flex-shrink: 0;';
+      item.appendChild(spacer);
+    }
+    
+    // Middle: name & status label
     const infoCol = document.createElement('div');
     infoCol.style.cssText = 'display: flex; flex-direction: column; flex-grow: 1; min-width: 0;';
     
@@ -4935,6 +4983,7 @@ function renderActiveReorderList() {
     nameSpan.textContent = ex.name;
     
     const badgeSpan = document.createElement('span');
+    badgeSpan.className = 'reorder-badge';
     badgeSpan.style.cssText = 'font-size: 0.72rem; font-weight: 600; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.3px;';
     
     if (isCompleted) {
@@ -4952,61 +5001,144 @@ function renderActiveReorderList() {
     infoCol.appendChild(badgeSpan);
     item.appendChild(infoCol);
     
-    // Right side: controls (up/down arrows)
-    const controls = document.createElement('div');
-    controls.style.cssText = 'display: flex; gap: 4px; align-items: center; flex-shrink: 0;';
+    // Right side: Completed count badge
+    const rightCol = document.createElement('div');
+    rightCol.style.cssText = 'font-size: 0.75rem; color: var(--text-secondary); flex-shrink: 0; font-weight: 600;';
+    const completedSetsCount = ex.actualSets ? ex.actualSets.length : 0;
+    rightCol.textContent = `${completedSetsCount}/${ex.plannedSets} sets`;
+    item.appendChild(rightCol);
     
-    if (!isCompleted) {
-      // Up button: enabled if index is greater than the current active index (cannot move above current/completed)
-      const upBtn = document.createElement('button');
-      upBtn.className = 'btn btn-secondary';
-      upBtn.style.cssText = 'padding: 0; border-radius: 8px; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; cursor: pointer;';
-      upBtn.innerHTML = '↑';
-      if (idx <= currentIndex) {
-        upBtn.disabled = true;
-        upBtn.style.opacity = '0.25';
-        upBtn.style.cursor = 'not-allowed';
-      } else {
-        upBtn.addEventListener('click', () => {
-          moveTempExercise(idx, -1);
-        });
-      }
-      controls.appendChild(upBtn);
-      
-      // Down button: enabled if index is less than the last exercise
-      const downBtn = document.createElement('button');
-      downBtn.className = 'btn btn-secondary';
-      downBtn.style.cssText = 'padding: 0; border-radius: 8px; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; cursor: pointer;';
-      downBtn.innerHTML = '↓';
-      if (idx === tempReorderExercises.length - 1) {
-        downBtn.disabled = true;
-        downBtn.style.opacity = '0.25';
-        downBtn.style.cursor = 'not-allowed';
-      } else {
-        downBtn.addEventListener('click', () => {
-          moveTempExercise(idx, 1);
-        });
-      }
-      controls.appendChild(downBtn);
-    }
-    
-    item.appendChild(controls);
     container.appendChild(item);
   });
 }
 
-function moveTempExercise(index, direction) {
-  const targetIndex = index + direction;
-  if (targetIndex < activeSession.currentExerciseIndex || targetIndex >= tempReorderExercises.length) {
-    return;
+function onReorderDragStart(e, idx) {
+  draggedIdx = idx;
+  dragStartY = e.clientY;
+  
+  // Capture pointer events on the target element
+  try {
+    e.target.setPointerCapture(e.pointerId);
+  } catch (err) {}
+  
+  const itemEl = document.querySelector(`[data-reorder-idx="${idx}"]`);
+  if (itemEl) {
+    itemEl.classList.add('dragging');
+    itemEl.style.zIndex = '1000';
+    itemEl.style.transform = 'scale(1.02)';
+    itemEl.style.boxShadow = '0 8px 24px rgba(0,0,0,0.5)';
+    itemEl.style.borderColor = 'var(--accent-color)';
+    itemEl.style.background = 'rgba(25, 27, 38, 0.95)';
   }
   
-  // Swap
-  const temp = tempReorderExercises[index];
-  tempReorderExercises[index] = tempReorderExercises[targetIndex];
-  tempReorderExercises[targetIndex] = temp;
+  e.preventDefault();
+}
+
+function onReorderDragMove(e) {
+  if (draggedIdx === null) return;
   
+  const currentY = e.clientY;
+  const diffY = currentY - dragStartY;
+  
+  const itemEl = document.querySelector(`[data-reorder-idx="${draggedIdx}"]`);
+  if (itemEl) {
+    itemEl.style.transform = `translateY(${diffY}px) scale(1.02)`;
+  }
+  
+  // Find element under pointer
+  const elementUnder = document.elementFromPoint(e.clientX, e.clientY);
+  if (!elementUnder) return;
+  
+  // Find the closest reorder-item under the pointer
+  const targetItem = elementUnder.closest('.reorder-item');
+  if (targetItem && targetItem !== itemEl) {
+    const targetIdx = parseInt(targetItem.dataset.reorderIdx);
+    const currentIndex = activeSession.currentExerciseIndex;
+    
+    // Block swapping with completed items
+    if (targetIdx < currentIndex || draggedIdx < currentIndex) {
+      return;
+    }
+    
+    // Swap in temporary array
+    const temp = tempReorderExercises[draggedIdx];
+    tempReorderExercises[draggedIdx] = tempReorderExercises[targetIdx];
+    tempReorderExercises[targetIdx] = temp;
+    
+    // Swap in the DOM
+    const parent = itemEl.parentNode;
+    if (targetIdx > draggedIdx) {
+      parent.insertBefore(itemEl, targetItem.nextSibling);
+    } else {
+      parent.insertBefore(itemEl, targetItem);
+    }
+    
+    // Update indices in the DOM
+    Array.from(parent.children).forEach((child, index) => {
+      child.dataset.reorderIdx = index;
+    });
+    
+    // Update variables
+    draggedIdx = targetIdx;
+    dragStartY = currentY; // Reset Y tracking origin to the new swapped position
+    
+    updateReorderBadgesAndStyles();
+  }
+}
+
+function onReorderDragEnd(e) {
+  if (draggedIdx === null) return;
+  
+  try {
+    e.target.releasePointerCapture(e.pointerId);
+  } catch (err) {}
+  
+  const itemEl = document.querySelector(`[data-reorder-idx="${draggedIdx}"]`);
+  if (itemEl) {
+    itemEl.classList.remove('dragging');
+    itemEl.style.zIndex = '';
+    itemEl.style.transform = '';
+    itemEl.style.boxShadow = '';
+    itemEl.style.borderColor = '';
+    itemEl.style.background = '';
+  }
+  
+  draggedIdx = null;
+  
+  // Complete visual redraw
   renderActiveReorderList();
+}
+
+function updateReorderBadgesAndStyles() {
+  const currentIndex = activeSession.currentExerciseIndex;
+  const items = document.querySelectorAll('#active-reorder-list .reorder-item');
+  
+  items.forEach(item => {
+    const idx = parseInt(item.dataset.reorderIdx);
+    const isCompleted = (idx < currentIndex);
+    const isActive = (idx === currentIndex);
+    
+    // Update active highlight styling on the fly (but leave dragging item's styles alone)
+    if (!item.classList.contains('dragging')) {
+      item.style.borderColor = isActive ? 'var(--accent-color)' : 'var(--card-border)';
+      item.style.boxShadow = isActive ? '0 0 10px var(--accent-glow)' : 'none';
+    }
+    
+    const badgeSpan = item.querySelector('.reorder-badge');
+    if (badgeSpan) {
+      const ex = tempReorderExercises[idx];
+      if (isCompleted) {
+        badgeSpan.style.color = 'var(--text-secondary)';
+        badgeSpan.textContent = 'Completed';
+      } else if (isActive) {
+        badgeSpan.style.color = 'var(--accent-color)';
+        badgeSpan.textContent = `Current Exercise • Set ${activeSession.currentSetIndex + 1} of ${ex.plannedSets}`;
+      } else {
+        badgeSpan.style.color = 'var(--text-secondary)';
+        badgeSpan.textContent = 'Upcoming';
+      }
+    }
+  });
 }
 
 function saveActiveReorderChanges() {
