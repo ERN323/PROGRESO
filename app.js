@@ -34,6 +34,7 @@ let activeSession = {
 let customExercises = [];
 let customPresets = [];
 let presetBuilderExercises = []; // Temp list of { name, plannedSets } in builder modal
+let tempReorderExercises = []; // Temp list for reordering active workout session exercises
 let activeEditingPresetIndex = null; // null if creating, number if editing
 let presetBuilderStep = 1; // Wizard step tracking
 let presetBuilderConfirmDeleteIndex = null; // Track index displaying inline delete confirmation
@@ -1241,6 +1242,25 @@ function setupEventListeners() {
       if (e.key === 'Enter') {
         e.preventDefault();
         savePresetCustomExercise();
+      }
+    });
+  }
+
+  // Active workout session reordering listeners
+  document.querySelectorAll('.active-reorder-trigger-btn').forEach(btn => {
+    btn.addEventListener('click', openActiveReorderModal);
+  });
+  
+  const activeReorderModal = document.getElementById('active-session-reorder-modal');
+  const activeReorderSaveBtn = document.getElementById('active-reorder-save-btn');
+  const activeReorderCancelBtn = document.getElementById('active-reorder-cancel-btn');
+  
+  if (activeReorderSaveBtn) activeReorderSaveBtn.addEventListener('click', saveActiveReorderChanges);
+  if (activeReorderCancelBtn) activeReorderCancelBtn.addEventListener('click', closeActiveReorderModal);
+  if (activeReorderModal) {
+    activeReorderModal.addEventListener('click', (e) => {
+      if (e.target === activeReorderModal) {
+        closeActiveReorderModal();
       }
     });
   }
@@ -4855,6 +4875,192 @@ function savePresetCustomExercise() {
   input.value = '';
   renderPresetBuilderCatalogue();
   populateExerciseAutocomplete();
+}
+
+// Active Workout Session Reordering Implementation
+function openActiveReorderModal() {
+  if (!activeSession || !activeSession.exercises || activeSession.exercises.length === 0) {
+    return;
+  }
+  // Deep copy the exercises so we can reorder them temporarily
+  tempReorderExercises = activeSession.exercises.map(ex => ({
+    name: ex.name,
+    plannedSets: ex.plannedSets,
+    actualSets: ex.actualSets ? [...ex.actualSets] : []
+  }));
+  
+  document.getElementById('active-session-reorder-modal').classList.add('active');
+  renderActiveReorderList();
+}
+
+function closeActiveReorderModal() {
+  document.getElementById('active-session-reorder-modal').classList.remove('active');
+}
+
+function renderActiveReorderList() {
+  const container = document.getElementById('active-reorder-list');
+  if (!container) return;
+  container.innerHTML = '';
+  
+  const currentIndex = activeSession.currentExerciseIndex;
+  
+  tempReorderExercises.forEach((ex, idx) => {
+    const isCompleted = (idx < currentIndex);
+    const isActive = (idx === currentIndex);
+    const isUpcoming = (idx > currentIndex);
+    
+    // Create card container
+    const item = document.createElement('div');
+    item.className = 'reorder-item';
+    item.style.cssText = `
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid ${isActive ? 'var(--accent-color)' : 'var(--card-border)'};
+      padding: 10px 14px;
+      border-radius: 12px;
+      gap: 10px;
+      opacity: ${isCompleted ? '0.45' : '1'};
+      transition: all 0.25s ease;
+      box-shadow: ${isActive ? '0 0 10px var(--accent-glow)' : 'none'};
+    `;
+    
+    // Left side: name & status label
+    const infoCol = document.createElement('div');
+    infoCol.style.cssText = 'display: flex; flex-direction: column; flex-grow: 1; min-width: 0;';
+    
+    const nameSpan = document.createElement('span');
+    nameSpan.style.cssText = 'font-weight: 600; font-size: 0.92rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;';
+    nameSpan.textContent = ex.name;
+    
+    const badgeSpan = document.createElement('span');
+    badgeSpan.style.cssText = 'font-size: 0.72rem; font-weight: 600; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.3px;';
+    
+    if (isCompleted) {
+      badgeSpan.style.color = 'var(--text-secondary)';
+      badgeSpan.textContent = 'Completed';
+    } else if (isActive) {
+      badgeSpan.style.color = 'var(--accent-color)';
+      badgeSpan.textContent = `Current Exercise • Set ${activeSession.currentSetIndex + 1} of ${ex.plannedSets}`;
+    } else {
+      badgeSpan.style.color = 'var(--text-secondary)';
+      badgeSpan.textContent = 'Upcoming';
+    }
+    
+    infoCol.appendChild(nameSpan);
+    infoCol.appendChild(badgeSpan);
+    item.appendChild(infoCol);
+    
+    // Right side: controls (up/down arrows)
+    const controls = document.createElement('div');
+    controls.style.cssText = 'display: flex; gap: 4px; align-items: center; flex-shrink: 0;';
+    
+    if (!isCompleted) {
+      // Up button: enabled if index is greater than the current active index (cannot move above current/completed)
+      const upBtn = document.createElement('button');
+      upBtn.className = 'btn btn-secondary';
+      upBtn.style.cssText = 'padding: 0; border-radius: 8px; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; cursor: pointer;';
+      upBtn.innerHTML = '↑';
+      if (idx <= currentIndex) {
+        upBtn.disabled = true;
+        upBtn.style.opacity = '0.25';
+        upBtn.style.cursor = 'not-allowed';
+      } else {
+        upBtn.addEventListener('click', () => {
+          moveTempExercise(idx, -1);
+        });
+      }
+      controls.appendChild(upBtn);
+      
+      // Down button: enabled if index is less than the last exercise
+      const downBtn = document.createElement('button');
+      downBtn.className = 'btn btn-secondary';
+      downBtn.style.cssText = 'padding: 0; border-radius: 8px; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; cursor: pointer;';
+      downBtn.innerHTML = '↓';
+      if (idx === tempReorderExercises.length - 1) {
+        downBtn.disabled = true;
+        downBtn.style.opacity = '0.25';
+        downBtn.style.cursor = 'not-allowed';
+      } else {
+        downBtn.addEventListener('click', () => {
+          moveTempExercise(idx, 1);
+        });
+      }
+      controls.appendChild(downBtn);
+    }
+    
+    item.appendChild(controls);
+    container.appendChild(item);
+  });
+}
+
+function moveTempExercise(index, direction) {
+  const targetIndex = index + direction;
+  if (targetIndex < activeSession.currentExerciseIndex || targetIndex >= tempReorderExercises.length) {
+    return;
+  }
+  
+  // Swap
+  const temp = tempReorderExercises[index];
+  tempReorderExercises[index] = tempReorderExercises[targetIndex];
+  tempReorderExercises[targetIndex] = temp;
+  
+  renderActiveReorderList();
+}
+
+function saveActiveReorderChanges() {
+  const originalActiveEx = activeSession.exercises[activeSession.currentExerciseIndex];
+  const newActiveEx = tempReorderExercises[activeSession.currentExerciseIndex];
+  
+  const activeExChanged = (originalActiveEx.name !== newActiveEx.name);
+  
+  // Commit the new order to the session
+  activeSession.exercises = tempReorderExercises;
+  
+  if (activeExChanged) {
+    // Reset set counter to the new active exercise's completed sets count
+    activeSession.currentSetIndex = newActiveEx.actualSets ? newActiveEx.actualSets.length : 0;
+    
+    // Clear rest timer if running
+    clearInterval(activeSession.timerInterval);
+    if (restAudio) {
+      restAudio.pause();
+      restAudio.onended = null;
+    }
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.setActionHandler('nexttrack', null);
+      navigator.mediaSession.setActionHandler('pause', null);
+    }
+    
+    // Switch UI focus to the new exercise
+    startActiveExerciseTracking();
+  } else {
+    // If active exercise is the same but upcoming exercises were reordered,
+    // and we are currently on the rest timer screen:
+    const timerScreen = document.getElementById('screen-track-timer');
+    if (timerScreen && timerScreen.classList.contains('active')) {
+      const currentEx = activeSession.exercises[activeSession.currentExerciseIndex];
+      const isLastSetOfExercise = (activeSession.currentSetIndex === currentEx.plannedSets - 1);
+      if (isLastSetOfExercise && activeSession.currentExerciseIndex < activeSession.exercises.length - 1) {
+        const nextEx = activeSession.exercises[activeSession.currentExerciseIndex + 1];
+        const subtext = document.getElementById('timer-next-set');
+        if (subtext) {
+          subtext.textContent = `Up Next: ${nextEx.name} (Set 1 of ${nextEx.plannedSets})`;
+        }
+      }
+    }
+    
+    // Also, if we are on the wait reps screen, update exercise details just in case
+    const waitRepsScreen = document.getElementById('screen-track-wait-reps');
+    if (waitRepsScreen && waitRepsScreen.classList.contains('active')) {
+      const currentEx = activeSession.exercises[activeSession.currentExerciseIndex];
+      document.getElementById('active-ex-name').textContent = currentEx.name;
+      document.getElementById('active-set-count').textContent = `Set ${activeSession.currentSetIndex + 1} of ${currentEx.plannedSets}`;
+    }
+  }
+  
+  closeActiveReorderModal();
 }
 
 

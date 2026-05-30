@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PROGRESO // Premium Workout Tracker & Visualizer</title>
-  <link rel="stylesheet" href="style.css?v=41">
+  <link rel="stylesheet" href="style.css?v=42">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <meta name="theme-color" content="#bd00ff">
@@ -347,7 +347,15 @@
         <div id="screen-track-wait-reps" class="state-screen">
           <div class="active-exercise-display">
             <div class="ex-name" id="active-ex-name">Squats</div>
-            <div class="set-count" id="active-set-count">Set 1 of 4</div>
+            <div style="display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; margin-top: 4px;">
+              <span class="set-count" id="active-set-count" style="margin-bottom: 0;">Set 1 of 4</span>
+              <button class="btn btn-secondary active-reorder-trigger-btn" style="padding: 6px 12px; font-size: 0.72rem; border-radius: 8px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; cursor: pointer;" title="Change Exercise Order">
+                <svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M3 7.5L7.5 3m0 0L12 7.5M7.5 3v13.5m13.5 0L16.5 21m0 0L12 16.5m4.5 4.5V7.5" />
+                </svg>
+                Change Order
+              </button>
+            </div>
           </div>
 
           <div class="input-prompt-label">Insert set numbers:</div>
@@ -373,7 +381,15 @@
         <div id="screen-track-timer" class="state-screen">
           <div class="active-exercise-display">
             <div class="ex-name" id="timer-ex-name">Squats</div>
-            <div class="set-count" id="timer-next-set">Up Next: Set 2 of 4</div>
+            <div style="display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; margin-top: 4px;">
+              <span class="set-count" id="timer-next-set" style="margin-bottom: 0;">Up Next: Set 2 of 4</span>
+              <button class="btn btn-secondary active-reorder-trigger-btn" style="padding: 6px 12px; font-size: 0.72rem; border-radius: 8px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; cursor: pointer;" title="Change Exercise Order">
+                <svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M3 7.5L7.5 3m0 0L12 7.5M7.5 3v13.5m13.5 0L16.5 21m0 0L12 16.5m4.5 4.5V7.5" />
+                </svg>
+                Change Order
+              </button>
+            </div>
           </div>
 
           <div class="timer-container">
@@ -850,6 +866,29 @@
       <button class="btn btn-secondary" id="modal-close-picker-btn" style="width: 100%; border-radius: 12px; padding: 12px; font-weight: 600;">
         Cancel
       </button>
+    </div>
+  </div>
+
+  <!-- ACTIVE SESSION REORDER MODAL -->
+  <div id="active-session-reorder-modal" class="modal-overlay">
+    <div class="modal-content card" style="max-width: 400px; display: flex; flex-direction: column; max-height: 85vh;">
+      <h3 class="card-title" style="text-align: center; margin-bottom: 8px;">Adjust Exercise Order</h3>
+      <p style="color: var(--text-secondary); font-size: 0.82rem; margin-bottom: 16px; text-align: center;">
+        Reorder remaining exercises or change their sequence. Lighter items are already completed.
+      </p>
+      
+      <div style="overflow-y: auto; flex: 1; padding-right: 4px; display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px;" id="active-reorder-list">
+        <!-- Dynamically populated exercises list -->
+      </div>
+
+      <div style="display: flex; gap: 12px; border-top: 1px solid var(--card-border); padding-top: 16px;">
+        <button class="btn btn-secondary" id="active-reorder-cancel-btn" style="flex: 1; border-radius: 12px; padding: 12px; font-weight: 600;">
+          Cancel
+        </button>
+        <button class="btn btn-primary" id="active-reorder-save-btn" style="flex: 1; border-radius: 12px; padding: 12px; font-weight: 600;">
+          Save Changes
+        </button>
+      </div>
     </div>
   </div>
 
