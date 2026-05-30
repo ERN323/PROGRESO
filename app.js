@@ -4983,18 +4983,8 @@ function renderActiveReorderList() {
       
       // Hook up Pointer Events for touch-compatible dragging
       handle.addEventListener('pointerdown', (e) => {
-        handle.style.cursor = 'grabbing';
         onReorderDragStart(e, idx);
       });
-      handle.addEventListener('pointermove', onReorderDragMove);
-      
-      const endDrag = (e) => {
-        handle.style.cursor = 'grab';
-        onReorderDragEnd(e);
-      };
-      
-      handle.addEventListener('pointerup', endDrag);
-      handle.addEventListener('pointercancel', endDrag);
       
       item.appendChild(handle);
     } else {
@@ -5030,7 +5020,21 @@ function onReorderDragStart(e, idx) {
     itemEl.style.boxShadow = '0 8px 24px rgba(0,0,0,0.5)';
     itemEl.style.borderColor = 'var(--accent-color)';
     itemEl.style.background = 'rgba(25, 27, 38, 0.95)';
+    const handle = itemEl.querySelector('.drag-handle');
+    if (handle) {
+      handle.style.cursor = 'grabbing';
+    }
   }
+  
+  // Register global drag listeners on window for drift tolerance & reliability
+  window.addEventListener('pointermove', onReorderDragMove);
+  window.addEventListener('pointerup', onReorderDragEnd);
+  window.addEventListener('pointercancel', onReorderDragEnd);
+  
+  // Guarantee cleanup if pointer capture is lost
+  try {
+    e.target.addEventListener('lostpointercapture', onReorderDragEnd, { once: true });
+  } catch (err) {}
   
   e.preventDefault();
 }
@@ -5054,9 +5058,16 @@ function onReorderDragMove(e) {
     itemEl.style.transform = `translateY(${diffY}px) scale(1.02)`;
   }
   
+  // Lock hit-testing center coordinate to container center to tolerate horizontal drift
+  let testX = e.clientX;
+  if (container) {
+    const rect = container.getBoundingClientRect();
+    testX = rect.left + rect.width / 2;
+  }
+  
   // Find element under pointer, temporarily piercing through the dragging element
   if (itemEl) itemEl.style.pointerEvents = 'none';
-  const elementUnder = document.elementFromPoint(e.clientX, currentY);
+  const elementUnder = document.elementFromPoint(testX, currentY);
   if (itemEl) itemEl.style.pointerEvents = 'auto';
   
   if (!elementUnder) return;
@@ -5150,9 +5161,19 @@ function onReorderDragMove(e) {
 function onReorderDragEnd(e) {
   if (draggedIdx === null) return;
   
-  try {
-    e.target.releasePointerCapture(e.pointerId);
-  } catch (err) {}
+  // Clean up global listeners
+  window.removeEventListener('pointermove', onReorderDragMove);
+  window.removeEventListener('pointerup', onReorderDragEnd);
+  window.removeEventListener('pointercancel', onReorderDragEnd);
+  
+  if (e && e.target) {
+    try {
+      e.target.releasePointerCapture(e.pointerId);
+    } catch (err) {}
+    try {
+      e.target.removeEventListener('lostpointercapture', onReorderDragEnd);
+    } catch (err) {}
+  }
   
   const itemEl = document.querySelector(`[data-reorder-idx="${draggedIdx}"]`);
   if (itemEl) {
@@ -5162,6 +5183,10 @@ function onReorderDragEnd(e) {
     itemEl.style.boxShadow = '';
     itemEl.style.borderColor = '';
     itemEl.style.background = '';
+    const handle = itemEl.querySelector('.drag-handle');
+    if (handle) {
+      handle.style.cursor = '';
+    }
   }
   
   draggedIdx = null;
