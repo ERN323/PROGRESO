@@ -5031,11 +5031,6 @@ function onReorderDragStart(e, idx) {
   window.addEventListener('pointerup', onReorderDragEnd);
   window.addEventListener('pointercancel', onReorderDragEnd);
   
-  // Guarantee cleanup if pointer capture is lost
-  try {
-    e.target.addEventListener('lostpointercapture', onReorderDragEnd, { once: true });
-  } catch (err) {}
-  
   e.preventDefault();
 }
 
@@ -5118,6 +5113,13 @@ function onReorderDragMove(e) {
       parent.insertBefore(itemEl, targetItem);
     }
     
+    // Re-acquire pointer capture since DOM insertion can release it
+    if (e && e.target && e.pointerId !== undefined) {
+      try {
+        e.target.setPointerCapture(e.pointerId);
+      } catch (err) {}
+    }
+    
     // Update indices in the DOM
     Array.from(parent.children).forEach((child, index) => {
       child.dataset.reorderIdx = index;
@@ -5169,9 +5171,6 @@ function onReorderDragEnd(e) {
   if (e && e.target) {
     try {
       e.target.releasePointerCapture(e.pointerId);
-    } catch (err) {}
-    try {
-      e.target.removeEventListener('lostpointercapture', onReorderDragEnd);
     } catch (err) {}
   }
   
