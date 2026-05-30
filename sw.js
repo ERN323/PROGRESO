@@ -1,8 +1,8 @@
-const CACHE_NAME = 'progreso-cache-v51';
+const CACHE_NAME = 'progreso-cache-v52';
 const ASSETS = [
   './',
   './index.html',
-  './style.css?v=51',
+  './style.css?v=52',
   './app.js',
   './icon.svg',
   './manifest.json',
