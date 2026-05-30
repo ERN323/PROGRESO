@@ -37,6 +37,8 @@ let presetBuilderExercises = []; // Temp list of { name, plannedSets } in builde
 let tempReorderExercises = []; // Temp list for reordering active workout session exercises
 let draggedIdx = null; // Currently dragged exercise index in reorder modal
 let dragStartY = 0; // Starting Y coordinate of pointer drag gesture
+let lastReorderPointerEvent = null; // Stores last pointer event for auto-scroll loop
+let reorderScrollAnimationFrame = null; // Animation frame reference for auto-scroll loop
 let activeEditingPresetIndex = null; // null if creating, number if editing
 let presetBuilderStep = 1; // Wizard step tracking
 let presetBuilderConfirmDeleteIndex = null; // Track index displaying inline delete confirmation
@@ -5006,6 +5008,7 @@ function renderActiveReorderList() {
 function onReorderDragStart(e, idx) {
   draggedIdx = idx;
   dragStartY = e.clientY;
+  lastReorderPointerEvent = e;
   
   // Capture pointer events on the target element
   try {
@@ -5031,20 +5034,73 @@ function onReorderDragStart(e, idx) {
   window.addEventListener('pointerup', onReorderDragEnd);
   window.addEventListener('pointercancel', onReorderDragEnd);
   
+  // Start the auto-scroll animation loop
+  if (!reorderScrollAnimationFrame) {
+    reorderScrollAnimationFrame = requestAnimationFrame(reorderScrollLoop);
+  }
+  
   e.preventDefault();
 }
 
 function onReorderDragMove(e) {
   if (draggedIdx === null) return;
+  lastReorderPointerEvent = e;
+  updateReorderDrag();
+}
+
+function reorderScrollLoop() {
+  if (draggedIdx === null || !lastReorderPointerEvent) {
+    reorderScrollAnimationFrame = null;
+    return;
+  }
   
-  // Constrain Y coordinate within container bounds to prevent dragging out of window
-  let currentY = e.clientY;
+  const e = lastReorderPointerEvent;
   const container = document.getElementById('active-reorder-list');
   if (container) {
     const rect = container.getBoundingClientRect();
-    if (currentY < rect.top) currentY = rect.top;
-    if (currentY > rect.bottom) currentY = rect.bottom;
+    const pointerY = e.clientY;
+    const threshold = 60; // px boundary zone at top/bottom of scroll container
+    let scrollSpeed = 0;
+    
+    if (pointerY < rect.top + threshold) {
+      // Near the top: scroll up (negative speed)
+      const ratio = (rect.top + threshold - pointerY) / threshold;
+      scrollSpeed = -Math.min(ratio, 2) * 5; // max speed 10px per frame
+    } else if (pointerY > rect.bottom - threshold) {
+      // Near the bottom: scroll down (positive speed)
+      const ratio = (pointerY - (rect.bottom - threshold)) / threshold;
+      scrollSpeed = Math.min(ratio, 2) * 5; // max speed 10px per frame
+    }
+    
+    if (scrollSpeed !== 0) {
+      const oldScrollTop = container.scrollTop;
+      container.scrollTop += scrollSpeed;
+      const actualScrollDiff = container.scrollTop - oldScrollTop;
+      
+      if (actualScrollDiff !== 0) {
+        // Adjust the dragStartY by the scroll difference to keep target visual positioning in sync
+        dragStartY -= actualScrollDiff;
+        updateReorderDrag();
+      }
+    }
   }
+  
+  reorderScrollAnimationFrame = requestAnimationFrame(reorderScrollLoop);
+}
+
+function updateReorderDrag() {
+  if (draggedIdx === null || !lastReorderPointerEvent) return;
+  
+  const e = lastReorderPointerEvent;
+  const container = document.getElementById('active-reorder-list');
+  if (!container) return;
+  
+  const rect = container.getBoundingClientRect();
+  let currentY = e.clientY;
+  
+  // Constrain Y coordinate within container bounds to prevent dragging out of window
+  if (currentY < rect.top) currentY = rect.top;
+  if (currentY > rect.bottom) currentY = rect.bottom;
   
   const diffY = currentY - dragStartY;
   
@@ -5054,11 +5110,7 @@ function onReorderDragMove(e) {
   }
   
   // Lock hit-testing center coordinate to container center to tolerate horizontal drift
-  let testX = e.clientX;
-  if (container) {
-    const rect = container.getBoundingClientRect();
-    testX = rect.left + rect.width / 2;
-  }
+  const testX = rect.left + rect.width / 2;
   
   // Find element under pointer, temporarily piercing through the dragging element
   if (itemEl) itemEl.style.pointerEvents = 'none';
@@ -5113,7 +5165,7 @@ function onReorderDragMove(e) {
       parent.insertBefore(itemEl, targetItem);
     }
     
-    // Re-acquire pointer capture since DOM insertion can release it
+    // Re-acquire pointer focus since DOM insertion can release it
     if (e && e.target && e.pointerId !== undefined) {
       try {
         e.target.setPointerCapture(e.pointerId);
@@ -5167,6 +5219,13 @@ function onReorderDragEnd(e) {
   window.removeEventListener('pointermove', onReorderDragMove);
   window.removeEventListener('pointerup', onReorderDragEnd);
   window.removeEventListener('pointercancel', onReorderDragEnd);
+  
+  // Cancel auto-scroll loop
+  if (reorderScrollAnimationFrame) {
+    cancelAnimationFrame(reorderScrollAnimationFrame);
+    reorderScrollAnimationFrame = null;
+  }
+  lastReorderPointerEvent = null;
   
   if (e && e.target) {
     try {
