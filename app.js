@@ -5074,7 +5074,28 @@ function reorderScrollLoop() {
     
     if (scrollSpeed !== 0) {
       const oldScrollTop = container.scrollTop;
-      container.scrollTop += scrollSpeed;
+      
+      // Calculate natural scroll height (excluding active translateY offsets) to prevent infinite scrolling
+      let naturalScrollHeight = 0;
+      const children = container.children;
+      for (let i = 0; i < children.length; i++) {
+        naturalScrollHeight += children[i].offsetHeight;
+      }
+      if (children.length > 0) {
+        naturalScrollHeight += (children.length - 1) * 8; // 8px gaps
+      }
+      const compStyle = window.getComputedStyle(container);
+      const paddingTop = parseFloat(compStyle.paddingTop) || 0;
+      const paddingBottom = parseFloat(compStyle.paddingBottom) || 0;
+      naturalScrollHeight += paddingTop + paddingBottom;
+      
+      const maxScroll = Math.max(0, naturalScrollHeight - container.clientHeight);
+      
+      let targetScrollTop = container.scrollTop + scrollSpeed;
+      if (targetScrollTop < 0) targetScrollTop = 0;
+      if (targetScrollTop > maxScroll) targetScrollTop = maxScroll;
+      
+      container.scrollTop = targetScrollTop;
       const actualScrollDiff = container.scrollTop - oldScrollTop;
       
       if (actualScrollDiff !== 0) {
