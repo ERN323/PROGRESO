@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PROGRESO // Premium Workout Tracker & Visualizer</title>
-  <link rel="stylesheet" href="style.css?v=40">
+  <link rel="stylesheet" href="style.css?v=41">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <meta name="theme-color" content="#bd00ff">
@@ -315,9 +315,26 @@
             Enter the planned rest duration between sets in seconds.
           </p>
 
-          <div class="form-group" style="max-width: 200px; margin: 0 auto 30px auto; text-align: center;">
-            <label for="planned-rest-seconds">Rest (Seconds)</label>
+          <div class="form-group" style="max-width: 200px; margin: 0 auto 25px auto; text-align: center;">
+            <label for="planned-rest-seconds">Default 60 Seconds</label>
             <input type="number" id="planned-rest-seconds" value="60" min="5" max="600" inputmode="numeric" pattern="[0-9]*" style="text-align: center; font-size: 1.5rem; font-weight: 700; padding: 12px;">
+          </div>
+
+          <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--card-border); border-radius: 12px; padding: 14px; margin-bottom: 25px; text-align: left;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; color: var(--accent-color); font-weight: 600; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px;">
+              <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+              </svg>
+              <span>Science of Rest</span>
+            </div>
+            <p style="font-size: 0.82rem; color: var(--text-secondary); line-height: 1.45; margin-bottom: 8px;">
+              Resting <strong>60 seconds</strong> strikes an optimal balance for muscle growth (hypertrophy) and metabolic conditioning:
+            </p>
+            <ul style="font-size: 0.78rem; color: var(--text-secondary); padding-left: 16px; line-height: 1.4; display: flex; flex-direction: column; gap: 4px;">
+              <li><strong>ATP-CP Recovery:</strong> Restoring ~85–90% of your muscle's primary energy store (phosphocreatine) occurs in 30–60s.</li>
+              <li><strong>Hypertrophy:</strong> 60–90s intervals maintain high metabolic stress, driving muscle hypertrophy signals.</li>
+              <li><strong>Strength & Power:</strong> Longer recovery (2–3m+) is recommended for near-maximum power and heavy strength sets.</li>
+            </ul>
           </div>
 
           <div style="display: flex; justify-content: space-between;">
