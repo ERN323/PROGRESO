@@ -5071,6 +5071,18 @@ function onReorderDragMove(e) {
       return;
     }
     
+    // Calculate midpoint of the target item to prevent jittering
+    const targetRect = targetItem.getBoundingClientRect();
+    const targetMidpoint = targetRect.top + targetRect.height / 2;
+    
+    if (targetIdx > draggedIdx) {
+      // Dragging down: only swap if pointer has passed the midpoint of target item
+      if (currentY < targetMidpoint) return;
+    } else {
+      // Dragging up: only swap if pointer has passed the midpoint of target item
+      if (currentY > targetMidpoint) return;
+    }
+    
     // Swap in temporary array
     const temp = tempReorderExercises[draggedIdx];
     tempReorderExercises[draggedIdx] = tempReorderExercises[targetIdx];
